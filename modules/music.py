@@ -46,11 +46,11 @@ sc_recommended = re.compile(r"https://soundcloud\.com/.*/recommended$")
 class Music(commands.Cog):
 
     emoji = "🎶"
-    name = "Música"
+    name = "Music"
     desc_prefix = f"[{emoji} {name}] | "
 
     playlist_opts = [
-        disnake.OptionChoice("Misturar Playlist", "shuffle"),
+        disnake.OptionChoice("Mix Playlist", "shuffle"),
         disnake.OptionChoice("Inverter Playlist", "reversed"),
     ]
 
@@ -85,7 +85,7 @@ class Music(commands.Cog):
     @pool_command(
         only_voiced=True, name="setvoicestatus", aliases=["stagevc", "togglestageannounce", "announce", "vcannounce", "setstatus",
                                                          "voicestatus", "setvcstatus", "statusvc", "vcstatus", "stageannounce"],
-        description="Ativar o sistema de anuncio/status automático do canal com o nome da música.",
+        description="Activate the channel's announcement/automatic status system with the music name.",
         cooldown=stage_cd, max_concurrency=stage_mc, extras={"exclusive_cooldown": True},
         usage="{prefix}{cmd} <placeholders>\nEx: {track.author} - {track.title}"
     )
@@ -93,15 +93,15 @@ class Music(commands.Cog):
         await self.set_voice_status.callback(self=self, inter=ctx, template=template)
 
     @commands.slash_command(
-        description=f"{desc_prefix}Ativar/editar o sistema de anúncio/status automático do canal com o nome da música.",
+        description=f"{desc_prefix}Activate/edit the channel's ad system/status with the music name.",
         extras={"only_voiced": True, "exclusive_cooldown": True}, cooldown=stage_cd, max_concurrency=stage_mc,
         default_member_permissions=disnake.Permissions(manage_guild=True), dm_permission=False
     )
     async def set_voice_status(
             self, inter: disnake.AppCmdInter,
             template: str = commands.Param(
-                name="modelo", default="",
-                description="Especifique manualmente um modelo de status (inclua placeholders)."
+                name="model", default="",
+                description="Manually specify a status model (include placeholders)."
             )
     ):
 
@@ -118,7 +118,7 @@ class Music(commands.Cog):
             author = inter.author
 
         if not author.guild_permissions.manage_guild and not (await bot.is_owner(author)):
-            raise GenericError("**Você não possui permissão de gerenciar servidor para ativar/desativar esse sistema.**")
+            raise GenericError("**You do not have permission to manage server to enable/disable this system.**")
 
         if not template:
             await inter.response.defer(ephemeral=True, with_message=True)
@@ -128,7 +128,7 @@ class Music(commands.Cog):
             await view.wait()
         else:
             if not any(p in template for p in SetStageTitle.placeholders):
-                raise GenericError(f"**Você deve usar pelo menos um placeholder válido:** {SetStageTitle.placeholder_text}")
+                raise GenericError(f"**You should use at least one valid placeholder:** {SetStageTitle.placeholder_text}")
 
             try:
                 player = bot.music.players[inter.guild_id]
@@ -151,14 +151,14 @@ class Music(commands.Cog):
 
             await player.process_save_queue()
 
-            player.set_command_log(text="ativou o status automático", emoji="📢")
+            player.set_command_log(text="activated automatic status", emoji="📢")
 
             player.update = True
 
             if isinstance(inter, CustomContext):
-                await inter.send("**O status automático foi definido com sucesso!**")
+                await inter.send("**Automatic status has been successfully defined!**")
             else:
-                await inter.edit_original_message("**O status automático foi definido com sucesso!**")
+                await inter.edit_original_message("**Automatic status was successfully defined!**")
 
 
     @set_voice_status.autocomplete("modelo")
@@ -167,7 +167,7 @@ class Music(commands.Cog):
             "{track.title} - By: {track.author} | {track.timestamp}",
             "{track.emoji} | {track.title}",
             "{track.title} ( {track.playlist} )",
-            "{track.title}  Solicitado por: {requester.name}",
+            "{track.title}  Requested by: {requester.name}",
         ]
 
     play_cd = commands.CooldownMapping.from_cooldown(3, 12, commands.BucketType.member)
@@ -180,7 +180,7 @@ class Music(commands.Cog):
     async def message_play(self, inter: disnake.MessageCommandInteraction):
 
         if not inter.target.content:
-            emb = disnake.Embed(description=f"Não há texto na [mensagem]({inter.target.jump_url}) selecionada...",
+            emb = disnake.Embed(description=f"There is no text in [message]({inter.target.jump_url}) selected...",
                                 color=disnake.Colour.red())
             await inter.send(embed=emb, ephemeral=True)
             return
@@ -198,30 +198,30 @@ class Music(commands.Cog):
     @check_voice()
     @can_send_message_check()
     @commands.slash_command(name="search", extras={"check_player": False}, cooldown=play_cd, max_concurrency=play_mc,
-                            description=f"{desc_prefix}Buscar música e escolher uma entre os resultados para tocar.",
+                            description=f"{desc_prefix}Seek music and choose one between the results to play.",
                             dm_permission=False)
     async def search(
             self,
             inter: disnake.AppCmdInter,
-            query: str = commands.Param(name="busca", desc="Nome ou link da música."),
+            query: str = commands.Param(name="search", desc="Music name or link."),
             *,
-            position: int = commands.Param(name="posição", description="Colocar a música em uma posição específica",
+            position: int = commands.Param(name="position", description="Put the music in a specific position",
                                            default=0),
             force_play: str = commands.Param(
-                name="tocar_agora",
-                description="Tocar a música imediatamente (ao invés de adicionar na fila).",
+                name="ringing",
+                description="Play the music immediately (instead of adding in line).",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
                 ]
             ),
-            options: str = commands.Param(name="opções", description="Opções para processar playlist",
+            options: str = commands.Param(name="options", description="Playlist processing options",
                                           choices=playlist_opts, default=False),
-            server: str = commands.Param(name="server", desc="Usar um servidor de música específico na busca.",
+            server: str = commands.Param(name="server", desc="Use a specific music server in the search.",
                                          default=None),
             manual_bot_choice: str = commands.Param(
-                name="selecionar_bot",
-                description="Selecionar um bot disponível manualmente.",
+                name="Select_bot",
+                description="Select a manually available bot.",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
@@ -241,7 +241,7 @@ class Music(commands.Cog):
             manual_bot_choice=manual_bot_choice
         )
 
-    @search.autocomplete("busca")
+    @search.autocomplete("search")
     async def search_autocomplete(self, inter: disnake.Interaction, current: str):
 
         if not current:
@@ -272,14 +272,14 @@ class Music(commands.Cog):
     @commands.max_concurrency(1, commands.BucketType.guild)
     @commands.slash_command(
         extras={"only_voiced": True}, dm_permission=False,
-        description=f"{desc_prefix}Me conectar em um canal de voz (ou me mover para um)."
+        description=f"{desc_prefix}Connect to a voice channel (or move to one)."
     )
     async def connect(
             self,
             inter: disnake.AppCmdInter,
             channel: Union[disnake.VoiceChannel, disnake.StageChannel] = commands.Param(
                 name="canal",
-                description="Canal para me conectar"
+                description="Channel to connect"
             )
     ):
         try:
@@ -334,8 +334,8 @@ class Music(commands.Cog):
         except KeyError:
             print(f"Player debug test 20: {bot.user} | {self.bot.user}")
             raise GenericError(
-                f"**O player do bot {bot.user.mention} foi finalizado antes de conectar no canal de voz "
-                f"(ou o player não foi inicializado)...\nPor via das dúvidas tente novamente.**"
+                f"**O player do bot{bot.user.mention} was completed before connecting to the voice channel "
+                f"(or the player was not initialized)...\nSince the case, try again.**"
             )
 
         can_connect(channel, me.guild, check_other_bots_in_vc=check_other_bots_in_vc, bot=bot)
@@ -353,8 +353,8 @@ class Music(commands.Cog):
 
             if channel != me.voice and me.voice.channel:
                 txt = [
-                    f"me moveu para o canal <#{channel.id}>",
-                    f"**Movido com sucesso para o canal** <#{channel.id}>"
+                    f"moved me to the channel <#{channel.id}>",
+                    f"**Successful to the channel** <#{channel.id}>"
                 ]
 
                 deafen_check = False
@@ -362,8 +362,8 @@ class Music(commands.Cog):
 
             else:
                 txt = [
-                    f"me conectou no canal <#{channel.id}>",
-                    f"**Conectei no canal** <#{channel.id}>"
+                    f"connected to the channel<#{channel.id}>",
+                    f"**Connect no channel** <#{channel.id}>"
                 ]
 
             await self.interaction_message(ctx, txt, emoji="🔈", rpc_update=True)
@@ -392,10 +392,10 @@ class Music(commands.Cog):
                 await text_channel.send(
                     embed=disnake.Embed(
                         title="Aviso:",
-                        description="Para manter sua privacidade e me ajudar a economizar "
-                                    "recursos, recomendo desativar meu áudio do canal clicando "
-                                    "com botão direito sobre mim e em seguida marcar: desativar "
-                                    "áudio no servidor.",
+                        description="To maintain your privacy and help me save money "
+                                    "resources, I recommend disable my channel audio by clicking "
+                                    "right -click on me and then mark: disable "
+                                    "Audio on the server.",
                         color=self.bot.get_color(me),
                     ).set_image(
                         url="https://cdn.discordapp.com/attachments/554468640942981147/1012533546386210956/unknown.png"
@@ -414,12 +414,12 @@ class Music(commands.Cog):
             else:
                 embed = disnake.Embed(color=self.bot.get_color(me))
 
-                embed.description = f"**Preciso que algum staff me convide para falar no palco: " \
+                embed.description = f"**I need some staff to invite me to talk on stage: " \
                                     f"[{channel.name}]({channel.jump_url}).**"
 
                 embed.set_footer(
-                    text="💡 Dica: para me permitir falar no palco automaticamente será necessário me conceder "
-                         "permissão de silenciar membros (no servidor ou apenas no canal de palco escolhido).")
+                    text="💡 Tip: To allow me to talk on stage automatically you will need to grant me "
+                         "permission to silence members (on the server or only on the chosen stage channel).")
 
                 await text_channel.send(ctx.author.mention, embed=embed, delete_after=45)
 
@@ -427,36 +427,36 @@ class Music(commands.Cog):
     @check_voice()
     @commands.bot_has_guild_permissions(send_messages=True)
     @commands.max_concurrency(1, commands.BucketType.member)
-    @pool_command(name="addposition", description="Adicionar música em uma posição especifica da fila.",
+    @pool_command(name="addposition", description="Add music to a specific position in the queue.",
                   aliases=["adp", "addpos"], check_player=False, cooldown=play_cd, max_concurrency=play_mc,
-                  usage="{prefix}{cmd} [posição(Nº)] [nome|link]\nEx: {prefix}{cmd} 2 sekai - burn me down")
+                  usage="{prefix}{cmd} [position(Nº)] [name|link]\nEx: {prefix}{cmd} 2 world - burn me down")
     async def addpos_legacy(self, ctx: CustomContext, position: int, *, query: str):
 
         if position < 1:
-            raise GenericError("**Número da posição da fila tem que ser 1 ou superior.**")
+            raise GenericError("**Number position number has to be 1 or higher.**")
 
         await self.play.callback(self=self, inter=ctx, query=query, position=position, options=False,
                                  force_play="no", manual_selection=False, server=None)
 
     stage_flags = CommandArgparse()
-    stage_flags.add_argument('query', nargs='*', help="nome ou link da música")
-    stage_flags.add_argument('-position', '-pos', '-p', type=int, default=0, help='Colocar a música em uma posição específica da fila (será ignorado caso use -next etc).\nEx: -p 10')
-    stage_flags.add_argument('-next', '-proximo', action='store_true', help='Adicionar a música/playlist no topo da fila (equivalente ao: -pos 1)')
-    stage_flags.add_argument('-reverse', '-r', action='store_true', help='Inverter a ordem das músicas adicionadas (efetivo apenas ao adicionar playlist).')
-    stage_flags.add_argument('-shuffle', '-sl', action='store_true', help='Misturar as músicas adicionadas (efetivo apenas ao adicionar playlist).')
-    stage_flags.add_argument('-select', '-s', action='store_true', help='Escolher a música entre os resultados encontrados.')
-    stage_flags.add_argument('-mix', '-rec', '-recommended', action="store_true", help="Adicionar/tocar músicas recomendadas com o nome do artsta - música informado.")
-    stage_flags.add_argument('-force', '-now', '-n', '-f', action='store_true', help='Tocar a música adicionada imediatamente (efetivo apenas se houver uma música tocando atualmente.)')
-    stage_flags.add_argument('-server', '-sv', type=str, default=None, help='Usar um servidor de música específico.')
-    stage_flags.add_argument('-selectbot', '-sb', action="store_true", help="Selecionar um bot disponível manualmente.")
+    stage_flags.add_argument('query', nargs='*', help="Music Name or Link")
+    stage_flags.add_argument('-position', '-pos', '-p', type=int, default=0, help='Put the music in a specific line in the line (will be ignored if you use -next etc).\nEx: -p 10')
+    stage_flags.add_argument('-next', '-proximo', action='store_true', help='Add the music/playlist at the top of the line (equivalent to: -Pos 1)')
+    stage_flags.add_argument('-reverse', '-r', action='store_true', help='Invert the order of added songs (effective only when adding playlist).')
+    stage_flags.add_argument('-shuffle', '-sl', action='store_true', help='Mix the added songs (effective only when adding playlist).')
+    stage_flags.add_argument('-select', '-s', action='store_true', help='Choose the music from the results found.')
+    stage_flags.add_argument('-mix', '-rec', '-recommended', action="store_true", help="Add/play recommended songs with the name of the artist - Informed Music.")
+    stage_flags.add_argument('-force', '-now', '-n', '-f', action='store_true', help='Play the music added immediately (effective only if there is a song.) ')
+    stage_flags.add_argument('-server', '-sv', type=str, default=None, help='Use a specific music server.')
+    stage_flags.add_argument('-selectbot', '-sb', action="store_true", help="Select a manually available bot.")
 
     @can_send_message_check()
     @commands.bot_has_guild_permissions(send_messages=True)
     @check_voice()
     @commands.max_concurrency(1, commands.BucketType.member)
-    @pool_command(name="play", description="Tocar música em um canal de voz.", aliases=["p"], check_player=False,
+    @pool_command(name="play", description="Play music on a voice channel.", aliases=["p"], check_player=False,
                   cooldown=play_cd, max_concurrency=play_mc, extras={"flags": stage_flags},
-                  usage="{prefix}{cmd} [nome|link]\nEx: {prefix}{cmd} sekai - burn me down")
+                  usage="{prefix}{cmd} [name|link]\nEx: {prefix}{cmd} sekai - burn me down")
     async def play_legacy(self, ctx: CustomContext, *, flags: str = ""):
 
         args, unknown = ctx.command.extras['flags'].parse_known_args(flags.split())
@@ -477,7 +477,7 @@ class Music(commands.Cog):
     @can_send_message_check()
     @commands.bot_has_guild_permissions(send_messages=True)
     @check_voice()
-    @pool_command(name="search", description="Pesquisar por músicas e escolher uma entre os resultados para tocar.",
+    @pool_command(name="search", description="Search for music and choose one between the results to play.",
                   aliases=["sc"], check_player=False, cooldown=play_cd, max_concurrency=play_mc,
                   usage="{prefix}{cmd} [nome]\nEx: {prefix}{cmd} sekai - burn me down")
     async def search_legacy(self, ctx: CustomContext, *, query):
@@ -489,30 +489,30 @@ class Music(commands.Cog):
     @check_voice()
     @commands.slash_command(
         name="play_music_file", dm_permission=False,
-        description=f"{desc_prefix}Tocar arquivo de música em um canal de voz.",
+        description=f"{desc_prefix}Play music file on a voice channel.",
         extras={"check_player": False}, cooldown=play_cd, max_concurrency=play_mc
     )
     async def play_file(
             self,
             inter: Union[disnake.AppCmdInter, CustomContext],
             file: disnake.Attachment = commands.Param(
-                name="arquivo", description="arquivo de audio para tocar ou adicionar na fila"
+                name="file", description="Audio file to play or add in line"
             ),
-            position: int = commands.Param(name="posição", description="Colocar a música em uma posição específica",
+            position: int = commands.Param(name="position", description="Put the music in a specific position",
                                            default=0),
             force_play: str = commands.Param(
-                name="tocar_agora",
-                description="Tocar a música imediatamente (ao invés de adicionar na fila).",
+                name="play now",
+                description="Play the music immediately (instead of adding in line).",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
                 ]
             ),
-            server: str = commands.Param(name="server", desc="Usar um servidor de música específico na busca.",
+            server: str = commands.Param(name="server", desc="Use a specific music server in the search.",
                                          default=None),
             manual_bot_choice: str = commands.Param(
-                name="selecionar_bot",
-                description="Selecionar um bot disponível manualmente.",
+                name="Select_bot",
+                description="Select a manually available bot.",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
@@ -548,7 +548,7 @@ class Music(commands.Cog):
             if count < 1:
                 return tracks
             if len(player.queue) >= count and not (await bot.is_owner(user)):
-                raise GenericError(f"**A fila está cheia ({self.bot.config['QUEUE_MAX_ENTRIES']} músicas).**")
+                raise GenericError(f"**The line is full ({self.bot.config['QUEUE_MAX_ENTRIES']} songs).**")
 
         if tracks:
 
@@ -564,41 +564,41 @@ class Music(commands.Cog):
     @can_send_message_check()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Tocar música em um canal de voz.", dm_permission=False,
+        description=f"{desc_prefix}Play music on a voice channel.", dm_permission=False,
         extras={"check_player": False}, cooldown=play_cd, max_concurrency=play_mc
     )
     async def play(
             self,
             inter: Union[disnake.AppCmdInter, CustomContext],
-            query: str = commands.Param(name="busca", desc="Nome ou link da música."), *,
-            position: int = commands.Param(name="posição", description="Colocar a música em uma posição específica",
+            query: str = commands.Param(name="search", desc="Music name or link."), *,
+            position: int = commands.Param(name="position", description="Put the music in a specific position",
                                            default=0),
             force_play: str = commands.Param(
-                name="tocar_agora",
-                description="Tocar a música imediatamente (ao invés de adicionar na fila).",
+                name="play now",
+                description="Play the music immediately (instead of adding in line).",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
                 ]
             ),
             mix: str = commands.Param(
-                name="recomendadas",
-                description="Tocar músicas recomendadas com base no nome do artista - música informado",
+                name="recommended",
+                description="Playing recommended songs based on the artist's name - Informado Music",
                 default=False,
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
                 ]
             ),
-            manual_selection: bool = commands.Param(name="selecionar_manualmente",
-                                                    description="Escolher uma música manualmente entre os resultados encontrados",
+            manual_selection: bool = commands.Param(name="select manually",
+                                                    description="Choose a song manually among the results found",
                                                     default=False),
-            options: str = commands.Param(name="opções", description="Opções para processar playlist",
+            options: str = commands.Param(name="options", description="Playlist processing options",
                                           choices=playlist_opts, default=False),
-            server: str = commands.Param(name="server", desc="Usar um servidor de música específico na busca.",
+            server: str = commands.Param(name="server", desc="Use a specific music server in the search.",
                                          default=None),
             manual_bot_choice: str = commands.Param(
-                name="selecionar_bot",
-                description="Selecionar um bot disponível manualmente.",
+                name="Select_bot",
+                description="Select a manually available bot.",
                 default="no",
                 choices=[
                     disnake.OptionChoice(disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"),
@@ -643,7 +643,7 @@ class Music(commands.Cog):
 
             msg = await func(
                 embed=disnake.Embed(
-                    description=f"**{inter.author.mention} entre em um canal de voz para tocar sua música.**\n"
+                    description=f"**{inter.author.mention} entre em um canal de voz para tap sua music.**\n"
                                 f"**Caso não conecte em um canal em até 25 segundos essa operação será cancelada.**",
                     color=color
                 )
@@ -703,7 +703,7 @@ class Music(commands.Cog):
 
                     newmsg = await func(
                         embed=disnake.Embed(
-                            description=f"**Escolha qual bot você deseja usar no canal {inter.author.voice.channel.mention}**",
+                            description=f"**Choose which bot you want to use on the channel{inter.author.voice.channel.mention}**",
                             color=self.bot.get_color(guild.me)), view=v
                     )
                     await v.wait()
@@ -717,7 +717,7 @@ class Music(commands.Cog):
                         except AttributeError:
                             func = inter.edit_original_message
                         try:
-                            await func(embed=disnake.Embed(description="### Tempo esgotado...", color=self.bot.get_color(guild.me)), view=None)
+                            await func(embed=disnake.Embed(description="### Exhausted weather...", color=self.bot.get_color(guild.me)), view=None)
                         except:
                             traceback.print_exc()
                         return
@@ -727,7 +727,7 @@ class Music(commands.Cog):
                             func = msg.edit
                         except AttributeError:
                             func = inter.edit_original_message
-                        await func(embed=disnake.Embed(description="### Operação cancelada.",
+                        await func(embed=disnake.Embed(description="### Canceled operation.",
                                                        color=self.bot.get_color(guild.me)), view=None)
                         return
 
@@ -736,7 +736,7 @@ class Music(commands.Cog):
                             func = msg.edit
                         except AttributeError:
                             func = inter.edit_original_message
-                        await func(embed=disnake.Embed(description="### Você não está conectado em um canal de voz...",
+                        await func(embed=disnake.Embed(description="### You are not connected to a voice channel...",
                                                        color=self.bot.get_color(guild.me)), view=None)
                         return
 
@@ -766,7 +766,7 @@ class Music(commands.Cog):
         await check_player_perm(inter=inter, bot=bot, channel=channel, guild_data=guild_data)
 
         if not guild.voice_client and not check_channel_limit(guild.me, inter.author.voice.channel):
-            raise GenericError(f"**O canal {inter.author.voice.channel.mention} está lotado!**")
+            raise GenericError(f"**The channel {inter.author.voice.channel.mention} It's packed!**")
 
         await self.check_player_queue(inter.author, bot, guild.id)
 
@@ -841,10 +841,10 @@ class Music(commands.Cog):
                     attachment = inter.message.attachments[0]
 
                     if attachment.size > 18000000:
-                        raise GenericError("**O arquivo que você enviou deve ter o tamanho igual ou inferior a 18mb.**")
+                        raise GenericError("**The file you sent must have the size of 18MB or less.**")
 
                     if attachment.content_type not in self.audio_formats:
-                        raise GenericError("**O arquivo que você enviou não é um arquivo de música válido...**")
+                        raise GenericError("**The file you sent is not a valid music file...**")
 
                     query = attachment.url
 
@@ -869,41 +869,41 @@ class Music(commands.Cog):
 
             opts = []
 
-            txt = "### `[⭐] Favoritos [⭐]`\n"
+            txt = "### `[⭐] Favorites [⭐]`\n"
 
             if user_data["fav_links"]:
-                opts.append(disnake.SelectOption(label="Usar favorito", value=">> [⭐ Favoritos ⭐] <<", emoji="⭐"))
-                txt += f"`Tocar música ou playlist que você curtiou ou que você tenha adicionado nos seus favoritos.`\n"
+                opts.append(disnake.SelectOption(label="To use favorite", value=">> [⭐ Favorites ⭐] <<", emoji="⭐"))
+                txt += f"`Play music or playlist you enjoyed or added to your favorites.`\n"
 
             else:
-                txt += f"`Você não possui favoritos...`\n"
+                txt += f"`You don't have favorites...`\n"
 
-            txt += f"-# Você pode gerenciar seus favoritos usando o comando {fav_slashcmd}.\n" \
-                   f"### `[💠] Integrações [💠]`\n"
+            txt += f"-# You can manage your favorites using the command {fav_slashcmd}.\n" \
+                   f"### `[💠] Integrations [💠]`\n"
 
             if user_data["integration_links"]:
-                opts.append(disnake.SelectOption(label="Usar integração", value=">> [💠 Integrações 💠] <<", emoji="💠"))
-                txt += f"`Tocar playlist pública de um canal do youtube (ou de um perfil de usuário de alguma plataforma de música) da sua lista de integrações.`\n"
+                opts.append(disnake.SelectOption(label="Use integration", value=">> [💠 Integrations 💠] <<", emoji="💠"))
+                txt += f"`Playing a public playlist of a YouTube channel (or a user profile of some music platform) from your integration list.`\n"
 
             else:
-                txt += f"`Você não possui integração adicionada... " \
-                        f"Use as integrações para adicionar links de canais do youtube (ou link de perfil de algum usuário de alguma plataforma de música) para ter acesso facilita a todas a playlists públicas que o mesmo possui.`\n"
+                txt += f"`You have no added integration... " \
+                        f"Use the integrations to add YouTube channel links (or a user profile link from some music platform) to get access to all public playlists it has.`\n"
 
-            txt += f"-# Para gerenciar suas integrações use o comando {fav_slashcmd} e em seguida selecione a opção \"integrações\".\n" \
-                    f"### `[💾] Fila Salva [💾]`\n"
+            txt += f"-# To manage your integrations use the command {fav_slashcmd} and then select the option \"integrations\".\n" \
+                    f"### `[💾] Save row [💾]`\n"
 
             if os.path.isfile(f"./local_database/saved_queues_v1/users/{inter.author.id}.pkl"):
-                txt += f"`Usar fila de música que você salvou via comando` {savequeue_slashcmd}.\n"
-                opts.append(disnake.SelectOption(label="Usar fila salva", value=">> [💾 Fila Salva 💾] <<", emoji="💾"))
+                txt += f"`Use music queue you saved via command` {savequeue_slashcmd}.\n"
+                opts.append(disnake.SelectOption(label="Use save row", value=">> [💾 Save row 💾] <<", emoji="💾"))
 
             else:
-                txt += "`Você não possui uma fila de música salva`\n" \
-                        f"-# Pra ter uma fila salva você pode usar o comando {savequeue_slashcmd} quando houver no mínimo 3 músicas adicionadas no player."
+                txt += "`You do not have a saved music queue`\n" \
+                        f"-# Phave a saved queue you can use the command {savequeue_slashcmd} qWhen there are at least 3 songs added to the player."
 
             if user_data["last_tracks"]:
-                txt += "### `[📑] Músicas recentes [📑]`\n" \
-                    "`Tocar uma música que você tenha ouvido/adicionado recentemente.`\n"
-                opts.append(disnake.SelectOption(label="Adicionar música recente", value=">> [📑 Músicas recentes 📑] <<", emoji="📑"))
+                txt += "### `[📑] Recent songs [📑]`\n" \
+                    "`Play a song you have heard/added recently.`\n"
+                opts.append(disnake.SelectOption(label="Add Recent Music", value=">> [📑Recent songs 📑] <<", emoji="📑"))
                 
             if isinstance(inter, disnake.MessageInteraction) and not inter.response.is_done():
                 await inter.response.defer(ephemeral=ephemeral)
@@ -912,17 +912,17 @@ class Music(commands.Cog):
                 guild_data = await bot.get_data(inter.guild_id, db_name=DBModel.guilds)
 
             if guild_data["player_controller"]["fav_links"]:
-                txt += "### `[📌] Favoritos do servidor [📌]`\n" \
-                        "`Usar favorito do servidor (adicionados por staffs do servidor).`\n"
-                opts.append(disnake.SelectOption(label="Usar favorito do servidor", value=">> [📌 Favoritos do servidor 📌] <<", emoji="📌"))
+                txt += "### `[📌] Server Favorites [📌]`\n" \
+                        "`Use server favorite (added by server staff).`\n"
+                opts.append(disnake.SelectOption(label="Use server favorite", value=">> [📌 Server Favorites 📌] <<", emoji="📌"))
 
             if not opts:
                 raise EmptyFavIntegration()
 
             embed = disnake.Embed(
                 color=self.bot.get_color(guild.me),
-                description=f"{txt}## Selecione uma opção abaixo:"
-                            f"\n-# Nota: Essa solicitação será cancelada automaticamente <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=180)).timestamp())}:R> caso não seja selecionado uma opção abaixo."
+                description=f"{txt}## Select an option below:"
+                            f"\n-# NOTE: This request will be canceled automatically <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=180)).timestamp())}:R> If an option is not selected below."
             )
 
             kwargs = {
@@ -957,7 +957,7 @@ class Music(commands.Cog):
 
             if not select_interaction or view.selected is False:
 
-                text = "### Tempo de seleção esgotado!" if view.selected is not False else "### Cancelado pelo usuário."
+                text = "### SEASED SELECTION TIME!" if view.selected is not False else "### Canceled by the user."
 
                 try:
                     await func(embed=disnake.Embed(description=text, color=self.bot.get_color(guild.me)),
@@ -970,7 +970,7 @@ class Music(commands.Cog):
             if select_interaction.data.values[0] == "cancel":
                 await func(
                     embed=disnake.Embed(
-                        description="**Seleção cancelada!**",
+                        description="**Canceled selection!**",
                         color=self.bot.get_color(guild.me)
                     ),
                     components=None
@@ -993,7 +993,7 @@ class Music(commands.Cog):
         menu = None
         selected_title = ""
 
-        if query.startswith(">> [💠 Integrações 💠] <<"):
+        if query.startswith(">> [💠 Integrations 💠] <<"):
             query = ""
             menu = "integrations"
             for k, v in user_data["integration_links"].items():
@@ -1012,33 +1012,33 @@ class Music(commands.Cog):
 
                 fav_opts.append({"url": v["url"], "option": disnake.SelectOption(label=fix_characters(k[6:], 45), value=f"> itg: {k}", description=f"[💠 Integração 💠] -> {platform}", emoji=emoji)})
 
-        elif query.startswith(">> [⭐ Favoritos ⭐] <<"):
+        elif query.startswith(">> [⭐ Favorites ⭐] <<"):
             query = ""
             menu = "favs"
             for k, v in user_data["fav_links"].items():
                 emoji, platform = music_source_emoji_url(v)
                 fav_opts.append({"url": v, "option": disnake.SelectOption(label=fix_characters(k, 45), value=f"> fav: {k}", description=f"[⭐ Favorito ⭐] -> {platform}", emoji=emoji)})
 
-        elif query.startswith(">> [📑 Músicas recentes 📑] <<"):
+        elif query.startswith(">> [📑 Recent songs 📑] <<"):
 
             if not user_data["last_tracks"]:
-                raise GenericError("**Você não possui músicas registradas no seu histórico...**\n"
-                                   "Elas vão aparecer a medida que for adicionando músicas via busca ou link.")
+                raise GenericError("**You don't have music recorded in your history...**\n"
+                                   "They will appear as you add music via search or link.")
 
             query = ""
             menu = "latest"
             for i, d in enumerate(user_data["last_tracks"]):
                 fav_opts.append({"url": d["url"], "option": disnake.SelectOption(label=d["name"], value=f"> lst: {i}",
-                                                                                 description="[📑 Músicas recentes 📑]",
+                                                                                 description="[📑 Recent songs 📑]",
                                                      emoji=music_source_emoji_url(d["url"])[0])})
 
-        elif query.startswith(">> [📌 Favoritos do servidor 📌] <<"):
+        elif query.startswith(">> [📌 Server Favorites 📌] <<"):
 
             if not guild_data:
                 guild_data = await bot.get_data(guild.id, db_name=DBModel.guilds)
 
             if not guild_data["player_controller"]["fav_links"]:
-                raise GenericError("**O servidor não possui links fixos/favoritos.**")
+                raise GenericError("**The server does not have fixed/favorite links.**")
 
             menu = "guild_favs"
             
@@ -1062,30 +1062,30 @@ class Music(commands.Cog):
                 )
 
                 if menu == "favs":
-                    embed.description = '### `[⭐] ⠂Favoritos ⠂[⭐]`\n' \
-                                        '`Tocar música ou playlist que você curtiou ou que você tenha adicionado na sua lista de favoritos.`\n' \
-                                        f'-# Você pode gerenciar seus favoritos usando o comando {fav_slashcmd}.\n\n' \
-                                         f'{embed.description}\n\n**Selecione um favorito abaixo:**'
+                    embed.description = '### `[⭐] ⠂favoritos ⠂[⭐]`\n' \
+                                        '`Play music or playlist you enjoyed or added to your favorite list.`\n' \
+                                        f'-# You can manage your favorites using the command {fav_slashcmd}.\n\n' \
+                                         f'{embed.description}\n\n**Select a favorite below:**'
 
                 elif menu == "integrations":
-                    embed.description = '### `[💠] ⠂Integrações ⠂[💠]`\n' \
-                                        '`Tocar playlist pública de um canal do youtube (ou de um perfil de usuário de alguma plataforma de música) da sua lista de integrações.`\n' \
-                                        f'-# Para gerenciar suas integrações use o comando {fav_slashcmd} e em seguida selecione a opção \"integrações\".\n\n' \
-                                         f'{embed.description}\n\n**Selecione uma integração abaixo:**'
+                    embed.description = '### `[💠] ⠂integrações ⠂[💠]`\n' \
+                                        '`Playing a public playlist of a YouTube channel (or a user profile of some music platform) from your integration list.`\n' \
+                                        f'-# To manage your integrations use the command {fav_slashcmd} and then select the option \"integrations\".\n\n' \
+                                         f'{embed.description}\n\n**Select an integration below:**'
 
                 elif menu == "guild_favs":
-                    embed.description = f'### `[📌] ⠂Favoritos do servidor ⠂[📌]\n' \
-                                        '`Usar favorito do servidor (adicionados por staffs do servidor).`\n\n'\
-                                         f'{embed.description}\n\n**Selecione um favorito abaixo:**'
+                    embed.description = f'### `[📌] ⠂Server Favorites ⠂[📌]\n' \
+                                        '`Use server favorite (added by server staff).`\n\n'\
+                                         f'{embed.description}\n\n**Select a favorite below:**'
 
                 elif menu == "latest":
-                    embed.description = f'### 📑 ⠂Tocar música/playlist recente:\n{embed.description}\n\n**Selecione um item abaixo:**'
+                    embed.description = f'### 📑 ⠂Play music/recent playlist:\n{embed.description}\n\n**Select an item below:**'
 
-                embed.description += f'\n-# Nota: Essa solicitação será cancelada automaticamente <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=75)).timestamp())}:R> caso não seja selecionado uma opção abaixo.'
+                embed.description += f'\n-# NOTE: This request will be canceled automatically <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=75)).timestamp())}:R> If an option is not selected below.'
 
                 try:
                     if bot.user.id != self.bot.user.id:
-                        embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                        embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
                 except AttributeError:
                     pass
 
@@ -1132,7 +1132,7 @@ class Music(commands.Cog):
                 if not select_interaction or view.selected is False:
 
                     embed.description = "\n".join(embed.description.split("\n")[:-3])
-                    embed.set_footer(text="⚠️ Tempo esgotado!" if not view.selected is False else "⚠️ Cancelado pelo usuário.")
+                    embed.set_footer(text="⚠️ Time exhausted!" if not view.selected is False else "⚠️ Canceled by the user.")
 
                     try:
                         await msg.edit(embed=embed, components=song_request_buttons)
@@ -1145,7 +1145,7 @@ class Music(commands.Cog):
 
                 if select_interaction.data.values[0] == "cancel":
                     embed.description = "\n".join(embed.description.split("\n")[:-3])
-                    embed.set_footer(text="⚠️ Seleção cancelada!")
+                    embed.set_footer(text="⚠️ Canceled selection!")
                     await msg.edit(embed=embed, components=None)
                     return
 
@@ -1206,7 +1206,7 @@ class Music(commands.Cog):
         if (matches := spotify_regex_w_user.match(query)):
 
             if not self.bot.spotify:
-                raise GenericError("**O suporte ao spotify não está disponível no momento...**")
+                raise GenericError("**Spotify support is not currently available..**")
 
             url_type, user_id = matches.groups()
 
@@ -1245,7 +1245,7 @@ class Music(commands.Cog):
         elif matches:=(yt_match:=youtube_regex.search(query)) or (sc_match:=soundcloud_regex.search(query)):
 
             if not self.bot.config["USE_YTDL"]:
-                raise GenericError("**Não há suporte a esse tipo de requisição no momento...**")
+                raise GenericError("**There is no support to this type of request at the moment...**")
 
             if yt_match:
                 query = f"{yt_match.group()}/playlists"
@@ -1265,9 +1265,9 @@ class Music(commands.Cog):
 
                 try:
                     if not info["entries"]:
-                        raise GenericError(f"**Conteúdo indisponível (ou privado):**\n{query}")
+                        raise GenericError(f"**Unavailable (or private) content:**\n{query}")
                 except KeyError:
-                    raise GenericError("**Ocorreu um erro ao tentar obter resultados para a opção selecionada...**")
+                    raise GenericError("**An error occurred when trying to get results for the selected option...**")
 
                 self.bot.pool.integration_cache[query] = info
 
@@ -1306,10 +1306,10 @@ class Music(commands.Cog):
                 for page_index, page in enumerate(disnake.utils.as_chunks(info['entries'], 15)):
 
                     embed = disnake.Embed(
-                        description="\n".join(f'-# ` {(15*page_index)+n+1}. `[`{i["title"]}`]({i["url"]})' for n, i in enumerate(page)) + "\n\n**Selecione uma playlist abaixo:**\n"
-                                    f'-# Essa solicitação será cancelada automaticamente <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=120)).timestamp())}:R> caso não seja selecionado uma opção abaixo.',
+                        description="\n".join(f'-# ` {(15*page_index)+n+1}. `[`{i["title"]}`]({i["url"]})' for n, i in enumerate(page)) + "\n\n**Select a playlist below:**\n"
+                                    f'-# This request will be canceled automatically <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=120)).timestamp())}:R> If an option is not selected below.',
                         color=self.bot.get_color(guild.me)
-                    ).set_author(name=f"Tocar playlist pública {embed_title}", icon_url=music_source_image(platform), url=query)
+                    ).set_author(name=f"Public Public Playlist {embed_title}", icon_url=music_source_image(platform), url=query)
 
                     if profile_avatar:
                         embed.set_thumbnail(profile_avatar)
@@ -1354,7 +1354,7 @@ class Music(commands.Cog):
                         embed = embeds[0]
 
                     embed.description = "\n".join(embed.description.split("\n")[:-3])
-                    embed.set_footer(text="⚠️ Tempo esgotado!" if not view.selected is False else "⚠️ Cancelado pelo usuário.")
+                    embed.set_footer(text="⚠️ Time exhausted!" if not view.selected is False else "⚠️ Canceled by the user.")
 
                     try:
                         await func(embed=embed,components=song_request_buttons)
@@ -1373,7 +1373,7 @@ class Music(commands.Cog):
 
             source = False
 
-        if query.startswith(">> [💾 Fila Salva 💾] <<"):
+        if query.startswith(">> [💾 Save row 💾] <<"):
 
             try:
                 async with aiofiles.open(f"./local_database/saved_queues_v1/users/{inter.author.id}.pkl", 'rb') as f:
@@ -1384,7 +1384,7 @@ class Music(commands.Cog):
                         pass
                     data = pickle.loads(f_content)
             except FileNotFoundError:
-                raise GenericError("**A sua fila salva já foi excluída...**")
+                raise GenericError("**Your Save Row has already been deleted ...**")
 
             tracks = await self.check_player_queue(inter.author, bot, guild.id, self.bot.pool.process_track_cls(data["tracks"])[0])
             node = await self.get_best_node(bot)
@@ -1404,13 +1404,13 @@ class Music(commands.Cog):
                 source = False
 
                 if not self.bot.config["ENABLE_DISCORD_URLS_PLAYBACK"] and "cdn.discordapp.com/attachments/" in query:
-                    raise GenericError("**O suporte a links do discord está desativado.**")
+                    raise GenericError("**Disorder link support is disabled.**")
 
                 if query.startswith("https://www.youtube.com/results"):
                     try:
                         query = f"ytsearch:{parse_qs(urlparse(query).query)['search_query'][0]}"
                     except:
-                        raise GenericError(f"**Não há suporte para o link informado:** {query}")
+                        raise GenericError(f"**There is no support for the informed link:** {query}")
                     manual_selection = True
 
                 elif "&list=" in query and (link_re := YOUTUBE_VIDEO_REG.match(query)):
@@ -1418,21 +1418,21 @@ class Music(commands.Cog):
                     view = SelectInteraction(
                         user=inter.author,
                         opts=[
-                            disnake.SelectOption(label="Música", emoji="🎵",
-                                                 description="Carregar apenas a música do link.", value="music"),
+                            disnake.SelectOption(label="Music", emoji="🎵",
+                                                 description="Load only the music of the link.", value="music"),
                             disnake.SelectOption(label="Playlist", emoji="🎶",
-                                                 description="Carregar playlist com a música atual.", value="playlist"),
+                                                 description="Playlist load with the current music.", value="playlist"),
                         ], timeout=30)
 
                     embed = disnake.Embed(
-                        description='**O link contém vídeo com playlist.**\n'
-                                    f'Selecione uma opção em até <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=30)).timestamp())}:R> para prosseguir.',
+                        description='**The link contains video with playlist.**\n'
+                                    f'Select an option by <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=30)).timestamp())}:R> para prosseguir.',
                         color=self.bot.get_color(guild.me)
                     )
 
                     try:
                         if bot.user.id != self.bot.user.id:
-                            embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}",
+                            embed.set_footer(text=f"Selected bot: {bot.user.display_name}",
                                              icon_url=bot.user.display_avatar.url)
                     except AttributeError:
                         pass
@@ -1456,7 +1456,7 @@ class Music(commands.Cog):
                             func = msg.edit
 
                         embed.description = "\n".join(embed.description.split("\n")[:-3])
-                        embed.set_footer(text="⚠️ Tempo esgotado!" if not view.selected is False else "⚠️ Cancelado pelo usuário.")
+                        embed.set_footer(text="⚠️ Time exhausted!" if not view.selected is False else "⚠️ Canceled by the user.")
 
                         try:
                             await func(embed=embed, components=song_request_buttons)
@@ -1538,7 +1538,7 @@ class Music(commands.Cog):
 
             if not queue_loaded and len(tracks) > 1 and (tracks[0].info['sourceName'] == "deezer" or manual_selection):
 
-                embed.description = f"**Selecione a(s) música(s) desejada(s) abaixo:**"
+                embed.description = f"**Select the desired music (s) below:**"
 
                 try:
                     func = inter.edit_original_message
@@ -1556,7 +1556,7 @@ class Music(commands.Cog):
                     embed=embed,
                     components=[
                         disnake.ui.Select(
-                            placeholder='Resultados:',
+                            placeholder='Results:',
                             custom_id=f"track_selection{add_id}",
                             min_values=1,
                             max_values=len(tracks),
@@ -1590,7 +1590,7 @@ class Music(commands.Cog):
                     except AttributeError:
                         func = msg.edit
                     try:
-                        await func(embed=disnake.Embed(color=disnake.Colour.red(), description="**Tempo esgotado!**"), view=None)
+                        await func(embed=disnake.Embed(color=disnake.Colour.red(), description="**Time exhausted!**"), view=None)
                     except disnake.NotFound:
                         pass
                     return
@@ -1679,14 +1679,14 @@ class Music(commands.Cog):
                     player.queue.append(tracks)
                 else:
                     player.queue.insert(position, tracks)
-                    pos_txt = f" na posição {position + 1} da fila"
+                    pos_txt = f" in the position {position + 1} in line"
 
                 duration = time_format(tracks.duration) if not tracks.is_stream else '🔴 Livestream'
 
                 if not track_url:
                     track_url = tracks.uri or tracks.search_uri
 
-                log_text = f"{inter.author.mention} adicionou [`{fix_characters(tracks.title, 20)}`](<{track_url}>){pos_txt} `({duration})`."
+                log_text = f"{inter.author.mention} added [`{fix_characters(tracks.title, 20)}`](<{track_url}>){pos_txt} `({duration})`."
 
                 loadtype = "track"
 
@@ -1721,8 +1721,8 @@ class Music(commands.Cog):
                     pos_txt = f" (Pos. {position + 1})"
 
                 if queue_loaded:
-                    log_text = f"{inter.author.mention} adicionou `{len(tracks)} músicas` via: {query[7:]}."
-                    title = f"Usando músicas salvas de {inter.author.display_name}"
+                    log_text = f"{inter.author.mention} added `{len(tracks)} songs` via: {query[7:]}."
+                    title = f"Using Songs Saved from {inter.author.display_name}"
                     icon_url = "https://i.ibb.co/51yMNPw/floppydisk.png"
 
                     tracks_playlists = {}
@@ -1735,13 +1735,13 @@ class Music(commands.Cog):
                                 tracks_playlists[t.playlist_url] = {"name": t.playlist_name, "count": 1}
 
                     if tracks_playlists:
-                        embed_description += "\n### Playlists carregadas:\n" + "\n".join(f"[`{info['name']}`]({url}) `- {info['count']} música{'s'[:info['count']^1]}` " for url, info in tracks_playlists.items()) + "\n"
+                        embed_description += "\n### Playlists carregadas:\n" + "\n".join(f"[`{info['name']}`]({url}) `- {info['count']} music{'s'[:info['count']^1]}` " for url, info in tracks_playlists.items()) + "\n"
 
                 else:
                     query = fix_characters(query.replace(f"{source}:", '', 1), 25)
-                    title = f"Busca: {query}"
+                    title = f"Search: {query}"
                     icon_url = music_source_image(tracks[0].info['sourceName'])
-                    log_text = f"{inter.author.mention} adicionou `{len(tracks)} músicas` via busca: `{query}`{pos_txt}."
+                    log_text = f"{inter.author.mention} added `{len(tracks)} songs` via search: `{query}`{pos_txt}."
 
                 total_duration = 0
 
@@ -1751,7 +1751,7 @@ class Music(commands.Cog):
 
                 embed.set_author(name="⠂" + title, icon_url=icon_url)
                 embed.set_thumbnail(url=tracks[0].thumb)
-                embed.description = f"`{(tcount:=len(tracks))} música{'s'[:tcount^1]}`**┃**`{time_format(total_duration)}`**┃**{inter.author.mention}"
+                embed.description = f"`{(tcount:=len(tracks))} music{'s'[:tcount^1]}`**┃**`{time_format(total_duration)}`**┃**{inter.author.mention}"
                 emoji = "🎶"
 
         else:
@@ -1806,11 +1806,11 @@ class Music(commands.Cog):
                             raise Exception(f"{r.status} | {await r.text()}")
                     tracks.data["playlistInfo"]["thumb"] = playlist_data["thumbnail_url"]
                 except Exception as e:
-                    print(f"Falha ao obter artwork da playlist: {oembed_url} | {repr(e)}")
+                    print(f"Failure to get artwork from the playlistt: {oembed_url} | {repr(e)}")
 
             loadtype = "playlist"
 
-            log_text = f"{inter.author.mention} adicionou a playlist [`{fix_characters(tracks.name, 20)}`](<{tracks.url}>){pos_txt} `({len(tracks.tracks)})`."
+            log_text = f"{inter.author.mention} added a playlist [`{fix_characters(tracks.name, 20)}`](<{tracks.url}>){pos_txt} `({len(tracks.tracks)})`."
 
             total_duration = 0
 
@@ -1830,7 +1830,7 @@ class Music(commands.Cog):
                     icon_url=music_source_image(tracks.tracks[0].info['sourceName'])
                 )
             embed.set_thumbnail(url=tracks.thumb)
-            embed.description = f"`{(tcount:=len(tracks.tracks))} música{'s'[:tcount^1]}`**┃**`{time_format(total_duration)}`**┃**{inter.author.mention}"
+            embed.description = f"`{(tcount:=len(tracks.tracks))} music{'s'[:tcount^1]}`**┃**`{time_format(total_duration)}`**┃**{inter.author.mention}"
             emoji = "🎶"
 
             if reg_query is not None and tracks.uri:
@@ -1844,7 +1844,7 @@ class Music(commands.Cog):
 
             if not player.is_connected:
                 try:
-                    embed.description += f"\n`Canal de voz:` {voice_channel.mention}"
+                    embed.description += f"\n`Voice channel:` {voice_channel.mention}"
                 except AttributeError:
                     pass
 
@@ -1876,9 +1876,9 @@ class Music(commands.Cog):
 
             elif loadtype == "track":
                 components = [
-                    disnake.ui.Button(emoji="💗", label="Favoritar", custom_id=PlayerControls.embed_add_fav),
-                    disnake.ui.Button(emoji="▶️", label="Tocar" + (" agora" if (player.current and player.current.autoplay) else ""), custom_id=PlayerControls.embed_forceplay),
-                    disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="Adicionar na fila",
+                    disnake.ui.Button(emoji="💗", label="Favorite", custom_id=PlayerControls.embed_add_fav),
+                    disnake.ui.Button(emoji="▶️", label="Tap" + (" agora" if (player.current and player.current.autoplay) else ""), custom_id=PlayerControls.embed_forceplay),
+                    disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="ADD",
                                       custom_id=PlayerControls.embed_enqueue_track),
                 ]
 
@@ -1888,8 +1888,8 @@ class Music(commands.Cog):
                 except:
                     pass
                 components = [
-                    disnake.ui.Button(emoji="💗", label="Favoritar", custom_id=PlayerControls.embed_add_fav),
-                    disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="Adicionar na fila",
+                    disnake.ui.Button(emoji="💗", label="Favorite", custom_id=PlayerControls.embed_add_fav),
+                    disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="ADD",
                                       custom_id=PlayerControls.embed_enqueue_playlist)
                 ]
             else:
@@ -1916,16 +1916,16 @@ class Music(commands.Cog):
         await self.process_music(inter=inter, force_play=force_play, ephemeral=ephemeral, user_data=user_data, player=player,
                                  log_text=log_text, emoji=emoji, warn_message=warn_message, reg_query=reg_query)
 
-    @play.autocomplete("busca")
+    @play.autocomplete("search")
     async def fav_add_autocomplete(self, inter: disnake.Interaction, query: str):
 
         if not self.bot.is_ready() or URL_REG.match(query) or URL_REG.match(query):
             return [query] if len(query) < 100 else []
 
-        favs = [">> [⭐ Favoritos ⭐] <<", ">> [💠 Integrações 💠] <<", ">> [📌 Favoritos do servidor 📌] <<"]
+        favs = [">> [⭐ Favorites ⭐] <<", ">> [💠 Integrations 💠] <<", ">> [📌 Server Favorites 📌] <<"]
 
         if os.path.isfile(f"./local_database/saved_queues_v1/users/{inter.author.id}.pkl"):
-            favs.append(">> [💾 Fila Salva 💾] <<")
+            favs.append(">> [💾 Save row 💾] <<")
 
         if not inter.guild_id:
             try:
@@ -1952,13 +1952,13 @@ class Music(commands.Cog):
 
     case_sensitive_args = CommandArgparse()
     case_sensitive_args.add_argument('-casesensitive', '-cs', action='store_true',
-                             help="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.")
+                             help="Searchr by Songs with the exact sentence in the name of music instead of searchr word by word.")
     @check_stage_topic()
     @is_requester()
     @check_queue_loading()
     @check_voice()
     @pool_command(name="skip", aliases=["next", "n", "s", "pular", "skipto"], cooldown=skip_back_cd,
-                  max_concurrency=skip_back_mc, description=f"Pular a música atual que está tocando.",
+                  max_concurrency=skip_back_mc, description=f"Puse the current music that is playing.",
                   extras={"flags": case_sensitive_args}, only_voiced=True,
                   usage="{prefix}{cmd} <termo>\nEx: {prefix}{cmd} sekai")
     async def skip_legacy(self, ctx: CustomContext, *, flags: str = ""):
@@ -1966,7 +1966,7 @@ class Music(commands.Cog):
         args, unknown = ctx.command.extras['flags'].parse_known_args(flags.split())
 
         if ctx.invoked_with == "skipto" and not unknown:
-            raise GenericError("**Você deve adicionar um nome para usar o skipto.**")
+            raise GenericError("**You must add a name to use the skipto.**")
 
         await self.skip.callback(self=self, inter=ctx, query=" ".join(unknown), case_sensitive=args.casesensitive)
 
@@ -1976,7 +1976,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Pular para uma música específica da fila.", dm_permission=False,
+        description=f"{desc_prefix}Jump to a specific line in line.", dm_permission=False,
         extras={"only_voiced": True}, cooldown=skip_back_cd, max_concurrency=skip_back_mc
     )
     async def skipto(
@@ -1984,11 +1984,11 @@ class Music(commands.Cog):
             inter: disnake.AppCmdInter,
             query: str = commands.Param(
                 name="nome",
-                description="Nome da música (completa ou parte dela)."
+                description="Music name (complete or part of it)."
             ),
             case_sensitive: bool = commands.Param(
                 name="nome_exato", default=False,
-                description="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.",
+                description="Searchr by Songs with the exact sentence in the name of music instead of searchr word by word.",
 
             )
     ):
@@ -2001,7 +2001,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Pular a música atual que está tocando.", dm_permission=False,
+        description=f"{desc_prefix}Jump the current music that is playing.", dm_permission=False,
         extras={"only_voiced": True}, cooldown=skip_back_cd, max_concurrency=skip_back_mc
     )
     async def skip(
@@ -2009,22 +2009,22 @@ class Music(commands.Cog):
             inter: disnake.AppCmdInter, *,
             query: str = commands.Param(
                 name="nome",
-                description="Nome da música (completa ou parte dela).",
+                description="Music name (complete or part of it).",
                 default=None,
             ),
             play_only: str = commands.Param(
-                name=disnake.Localized("play_only", data={disnake.Locale.pt_BR: "tocar_apenas"}),
+                name=disnake.Localized("play_only", data={disnake.Locale.pt_BR: "tap_apenas"}),
                 choices=[
                     disnake.OptionChoice(
                         disnake.Localized("Yes", data={disnake.Locale.pt_BR: "Sim"}), "yes"
                     )
                 ],
-                description="Apenas tocar a música imediatamente (sem rotacionar a flia)",
+                description="Only Tap the Music Immediately (without rotating FLIA)",
                 default="no"
             ),
             case_sensitive: bool = commands.Param(
                 name="nome_exato", default=False,
-                description="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.",
+                description="Searchr by Songs with the exact sentence in the name of music instead of searchr word by word.",
 
             )
     ):
@@ -2047,7 +2047,7 @@ class Music(commands.Cog):
             try:
                 index = queue_track_index(inter, bot, query, case_sensitive=case_sensitive)[0][0]
             except IndexError:
-                raise GenericError(f"**Não há músicas na fila com o nome: {query}**")
+                raise GenericError(f"**There are no songs in line with the name: {query}**")
 
             if player.queue:
                 track: LavalinkTrack = player.queue[index]
@@ -2076,17 +2076,17 @@ class Music(commands.Cog):
                 else:
                     player.queue.rotate(0 - index)
 
-            player.set_command_log(emoji="⤵️", text=f"{inter.author.mention} pulou para a música atual.")
+            player.set_command_log(emoji="⤵️", text=f"{inter.author.mention} jumped to the current music.")
 
             embed = disnake.Embed(
                 color=self.bot.get_color(guild.me),
-                description= f"⤵️ **⠂{inter.author.mention} pulou para a música:**\n"
+                description= f"⤵️ **⠂{inter.author.mention} jumped to music:**\n"
                              f"╰[`{fix_characters(track.title, 43)}`](<{track.uri or track.search_uri}>){player.controller_link}"
             )
 
             try:
                 if bot.user.id != self.bot.user.id:
-                    embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                    embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
             except AttributeError:
                 pass
 
@@ -2100,7 +2100,7 @@ class Music(commands.Cog):
         else:
 
             if isinstance(inter, disnake.MessageInteraction):
-                player.set_command_log(text=f"{inter.author.mention} pulou a música.", emoji="⏭️")
+                player.set_command_log(text=f"{inter.author.mention} Music's hat.", emoji="⏭️")
                 if not inter.response.is_done():
                     try:
                         await inter.response.defer()
@@ -2109,18 +2109,18 @@ class Music(commands.Cog):
                 interaction = inter
             else:
 
-                player.set_command_log(emoji="⏭️", text=f"{inter.author.mention} pulou a música.")
+                player.set_command_log(emoji="⏭️", text=f"{inter.author.mention} Music's hat.")
 
                 embed = disnake.Embed(
                     color=self.bot.get_color(guild.me),
-                    description=f"⏭️ **⠂{inter.author.mention} pulou a música:\n"
+                    description=f"⏭️ **⠂{inter.author.mention} Music's hat:\n"
                                 f"╰[`{fix_characters(player.current.title, 43)}`](<{player.current.uri or player.current.search_uri}>)**"
                                 f"{player.controller_link}"
                 )
 
                 try:
                     if bot.user.id != self.bot.user.id:
-                        embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                        embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
                 except AttributeError:
                     pass
 
@@ -2143,7 +2143,7 @@ class Music(commands.Cog):
     @check_queue_loading()
     @has_player()
     @check_voice()
-    @pool_command(name="back", aliases=["b", "voltar"], description="Voltar para a música anterior.", only_voiced=True,
+    @pool_command(name="back", aliases=["b", "voltar"], description="Back to the previous music.", only_voiced=True,
                   cooldown=skip_back_cd, max_concurrency=skip_back_mc)
     async def back_legacy(self, ctx: CustomContext):
         await self.back.callback(self=self, inter=ctx)
@@ -2155,7 +2155,7 @@ class Music(commands.Cog):
     @check_voice()
     @commands.max_concurrency(1, commands.BucketType.member)
     @commands.slash_command(
-        description=f"{desc_prefix}Voltar para a música anterior.", dm_permission=False,
+        description=f"{desc_prefix}Back to the previous music.", dm_permission=False,
         extras={"only_voiced": True}, cooldown=skip_back_cd, max_concurrency=skip_back_mc
     )
     async def back(self, inter: disnake.AppCmdInter):
@@ -2169,7 +2169,7 @@ class Music(commands.Cog):
 
         if not len(player.queue) and (player.keep_connected or not len(player.played)):
             await player.seek(0)
-            await self.interaction_message(inter, "voltou para o início da música.", emoji="⏪")
+            await self.interaction_message(inter, "returned to the beginning of music.", emoji="⏪")
             return
 
         try:
@@ -2196,7 +2196,7 @@ class Music(commands.Cog):
 
         if isinstance(inter, disnake.MessageInteraction):
             interaction = inter
-            player.set_command_log(text=f"{inter.author.mention} voltou para a música atual.", emoji="⏮️")
+            player.set_command_log(text=f"{inter.author.mention} returned to the current music.", emoji="⏮️")
             await inter.response.defer()
         else:
 
@@ -2205,8 +2205,8 @@ class Music(commands.Cog):
             t = player.queue[0]
 
             txt = [
-                "voltou para a música atual.",
-                f"⏮️ **⠂{inter.author.mention} voltou para a música:\n╰[`{fix_characters(t.title, 43)}`](<{t.uri or t.search_uri}>)**"
+                "returned to the current music.",
+                f"⏮️ **⠂{inter.author.mention} returned to music:\n╰[`{fix_characters(t.title, 43)}`](<{t.uri or t.search_uri}>)**"
             ]
 
             await self.interaction_message(inter, txt, emoji="⏮️", store_embed=True)
@@ -2228,7 +2228,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Votar para pular a música atual.",
+        description=f"{desc_prefix}VOTE TO JUMP THE CURRENT MUSIC.",
         extras={"only_voiced": True}, dm_permission=False
     )
     async def voteskip(self, inter: disnake.AppCmdInter):
@@ -2245,13 +2245,13 @@ class Music(commands.Cog):
         embed = disnake.Embed()
 
         if inter.author.id in player.votes:
-            raise GenericError("**Você já votou para pular a música atual.**")
+            raise GenericError("**You have already voted to jump the current music.**")
 
         embed.colour = self.bot.get_color(guild.me)
 
         txt = [
-            f"votou para pular a música atual (votos: {len(player.votes) + 1}/{self.bot.config['VOTE_SKIP_AMOUNT']}).",
-            f"{inter.author.mention} votou para pular a música atual (votos: {len(player.votes) + 1}/{self.bot.config['VOTE_SKIP_AMOUNT']}).",
+            f"voted to skip the current music (votes: {len(player.votes) + 1}/{self.bot.config['VOTE_SKIP_AMOUNT']}).",
+            f"{inter.author.mention} voted to skip the current music (votos: {len(player.votes) + 1}/{self.bot.config['VOTE_SKIP_AMOUNT']}).",
         ]
 
         if len(player.votes) < self.bot.config.get('VOTE_SKIP_AMOUNT', 3):
@@ -2270,24 +2270,24 @@ class Music(commands.Cog):
     @is_dj()
     @has_source()
     @check_voice()
-    @pool_command(name="volume", description="Ajustar volume da música.", aliases=["vol", "v"], only_voiced=True,
+    @pool_command(name="volume", description="Adjust music volume.", aliases=["vol", "v"], only_voiced=True,
                   cooldown=volume_cd, max_concurrency=volume_mc, usage="{prefix}{cmd} [nivel]\nEx: {prefix}{cmd} 50")
     async def volume_legacy(self, ctx: CustomContext, level: int):
 
         if not 4 < level < 151:
-            raise GenericError("**Volume inválido! escolha entre 5 a 150**", self_delete=7)
+            raise GenericError("**Invalid volume!Choose from 5 to 150**", self_delete=7)
 
         await self.volume.callback(self=self, inter=ctx, value=int(level))
 
     @is_dj()
     @has_source()
     @check_voice()
-    @commands.slash_command(description=f"{desc_prefix}Ajustar volume da música.", extras={"only_voiced": True},
+    @commands.slash_command(description=f"{desc_prefix}Adjust music volume.", extras={"only_voiced": True},
                             cooldown=volume_cd, max_concurrency=volume_mc, dm_permission=False)
     async def volume(
             self,
             inter: disnake.AppCmdInter, *,
-            value: int = commands.Param(name="nível", description="nível entre 5 a 150", min_value=5.0, max_value=150.0)
+            value: int = commands.Param(name="level", description="level between 5 to 150", min_value=5.0, max_value=150.0)
     ):
 
         try:
@@ -2306,11 +2306,11 @@ class Music(commands.Cog):
             view = VolumeInteraction(inter)
 
             embed.colour = self.bot.get_color(guild.me)
-            embed.description = "**Selecione o nível do volume abaixo:**"
+            embed.description = "**Select the volume level below
 
             try:
                 if bot.user.id != self.bot.user.id:
-                    embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                    embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
             except AttributeError:
                 pass
 
@@ -2322,11 +2322,11 @@ class Music(commands.Cog):
             value = view.volume
 
         elif not 4 < value < 151:
-            raise GenericError("O volume deve estar entre **5** a **150**.")
+            raise GenericError("The volume must be between ** 5 ** to ** 150 **150 **.")
 
         await player.set_volume(value)
 
-        txt = [f"ajustou o volume para **{value}%**", f"🔊 **⠂{inter.author.mention} ajustou o volume para {value}%**"]
+        txt = [f"adjusted the volume to**{value}%**", f"🔊 **⠂{inter.author.mention} adjusted the volume to{value}%**"]
         await self.interaction_message(inter, txt, emoji="🔊")
 
     pause_resume_cd = commands.CooldownMapping.from_cooldown(2, 7, commands.BucketType.member)
@@ -2335,7 +2335,7 @@ class Music(commands.Cog):
     @is_dj()
     @has_source()
     @check_voice()
-    @pool_command(name="pause", aliases=["pausar"], description="Pausar a música.", only_voiced=True,
+    @pool_command(name="pause", aliases=["Pauses"], description="Pauses a music.", only_voiced=True,
                   cooldown=pause_resume_cd, max_concurrency=pause_resume_mc)
     async def pause_legacy(self, ctx: CustomContext):
         await self.pause.callback(self=self, inter=ctx)
@@ -2344,7 +2344,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Pausar a música.", extras={"only_voiced": True},
+        description=f"{desc_prefix}Pauses a music.", extras={"only_voiced": True},
         cooldown=pause_resume_cd, max_concurrency=pause_resume_mc, dm_permission=False
     )
     async def pause(self, inter: disnake.AppCmdInter):
@@ -2357,11 +2357,11 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if player.paused:
-            raise GenericError("**A música já está pausada.**")
+            raise GenericError("**The music is already paused.**")
 
         await player.set_pause(True)
 
-        txt = ["pausou a música.", f"⏸️ **⠂{inter.author.mention} pausou a musica.**"]
+        txt = ["pausou a music.", f"⏸️ **⠂{inter.author.mention} paused the music.**"]
 
         await self.interaction_message(inter, txt, rpc_update=True, emoji="⏸️")
         await player.update_stage_topic()
@@ -2369,7 +2369,7 @@ class Music(commands.Cog):
     @is_dj()
     @has_source()
     @check_voice()
-    @pool_command(name="resume", aliases=["unpause"], description="Retomar/Despausar a música.", only_voiced=True,
+    @pool_command(name="resume", aliases=["unpause"], description="retomar/desPausesAMusic", only_voiced=True,
                   cooldown=pause_resume_cd, max_concurrency=pause_resume_mc)
     async def resume_legacy(self, ctx: CustomContext):
         await self.resume.callback(self=self, inter=ctx)
@@ -2378,7 +2378,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Retomar/Despausar a música.", dm_permission=False,
+        description=f"{desc_prefix}retomar/desPausesAMusic", dm_permission=False,
         extras={"only_voiced": True}, cooldown=pause_resume_cd, max_concurrency=pause_resume_mc
     )
     async def resume(self, inter: disnake.AppCmdInter):
@@ -2391,11 +2391,11 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if not player.paused:
-            raise GenericError("**A música não está pausada.**")
+            raise GenericError("**The music is not paused.**")
 
         await player.set_pause(False)
 
-        txt = ["retomou a música.", f"▶️ **⠂{inter.author.mention} despausou a música.**"]
+        txt = ["resumed the music.", f"▶️ **⠂{inter.author.mention} despausouAMusic.**"]
         await self.interaction_message(inter, txt, rpc_update=True, emoji="▶️")
         await player.update_stage_topic()
 
@@ -2407,7 +2407,7 @@ class Music(commands.Cog):
     @check_queue_loading()
     @has_source()
     @check_voice()
-    @pool_command(name="seek", aliases=["sk"], description="Avançar/Retomar a música para um tempo específico.",
+    @pool_command(name="seek", aliases=["sk"], description="Advance/resume music for a specific time.",
                   only_voiced=True, cooldown=seek_cd, max_concurrency=seek_mc,
                   usage="{prefix}{cmd} [tempo]\n"
                         "Ex 1: {prefix}{cmd} 10 (tempo 0:10)\n"
@@ -2421,13 +2421,13 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Avançar/Retomar a música para um tempo específico.",
+        description=f"{desc_prefix}Advance/resume music for a specific time.",
         extras={"only_voiced": True}, cooldown=seek_cd, max_concurrency=seek_mc, dm_permission=False
     )
     async def seek(
             self,
             inter: disnake.AppCmdInter,
-            position: str = commands.Param(name="tempo", description="Tempo para avançar/voltar (ex: 1:45 / 40 / 0:30)")
+            position: str = commands.Param(name="tempo", description="Time to advance / Back (Ex: 1:45 / 40/0:30)")
     ):
 
         try:
@@ -2438,7 +2438,7 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if player.current.is_stream:
-            raise GenericError("**Você não pode usar esse comando em uma livestream.**")
+            raise GenericError("**You cannot use this command in a livestream.**")
 
         position = position.split(" | ")[0].replace(" ", ":")
 
@@ -2446,7 +2446,7 @@ class Music(commands.Cog):
 
         if seconds is None:
             raise GenericError(
-                "**Você usou um tempo inválido! Use segundos (1 ou 2 digitos) ou no formato (minutos):(segundos)**")
+                "**You used an invalid time!Use seconds (1 or 2 digits) or in format (minutes) :( Seconds)**")
 
         milliseconds = seconds * 1000
 
@@ -2458,8 +2458,8 @@ class Music(commands.Cog):
             emoji = "⏩"
 
             txt = [
-                f"avançou o tempo da música para: `{time_format(milliseconds)}`",
-                f"{emoji} **⠂{inter.author.mention} avançou o tempo da música para:** `{time_format(milliseconds)}`"
+                f"advanced the time of music to: `{time_format(milliseconds)}`",
+                f"{emoji} **⠂{inter.author.mention} advanced the time of music to:** `{time_format(milliseconds)}`"
             ]
 
         else:
@@ -2467,8 +2467,8 @@ class Music(commands.Cog):
             emoji = "⏪"
 
             txt = [
-                f"voltou o tempo da música para: `{time_format(milliseconds)}`",
-                f"{emoji} **⠂{inter.author.mention} voltou o tempo da música para:** `{time_format(milliseconds)}`"
+                f"the time of music came back to: `{time_format(milliseconds)}`",
+                f"{emoji} **⠂{inter.author.mention} the time of music came back to:** `{time_format(milliseconds)}`"
             ]
 
         await player.seek(milliseconds)
@@ -2531,7 +2531,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @pool_command(
-        description=f"Selecionar modo de repetição entre: música atual / fila / desativar / quantidade (usando números).",
+        description=f"Select Repetition Mode between: Current Music / Line / Disable / Quantity (Using Numbers).",
         only_voiced=True, cooldown=loop_cd, max_concurrency=loop_mc,
         usage="{prefix}{cmd} <quantidade|modo>\nEx 1: {prefix}{cmd} 1\nEx 2: {prefix}{cmd} queue")
     async def loop(self, ctx: CustomContext, mode: str = None):
@@ -2539,7 +2539,7 @@ class Music(commands.Cog):
         if not mode:
 
             embed = disnake.Embed(
-                description="**Selecione um modo de repetição:**",
+                description="**Select a repetition mode:**",
                 color=self.bot.get_color(ctx.guild.me)
             )
 
@@ -2551,7 +2551,7 @@ class Music(commands.Cog):
                         placeholder="Selecione uma opção:",
                         custom_id="loop_mode_legacy",
                         options=[
-                            disnake.SelectOption(label="Música Atual", value="current"),
+                            disnake.SelectOption(label="Music Atual", value="current"),
                             disnake.SelectOption(label="Fila do player", value="queue"),
                             disnake.SelectOption(label="Desativar repetição", value="off")
                         ]
@@ -2565,7 +2565,7 @@ class Music(commands.Cog):
                     check=lambda i: i.message.id == msg.id and i.author == ctx.author
                 )
             except asyncio.TimeoutError:
-                embed.description = "Tempo de seleção esgotado!"
+                embed.description = "Selection time exhausted!"
                 try:
                     await msg.edit(embed=embed, view=None)
                 except:
@@ -2578,14 +2578,14 @@ class Music(commands.Cog):
         if mode.isdigit():
 
             if len(mode) > 2 or int(mode) > 10:
-                raise GenericError(f"**Quantidade inválida: {mode}**\n"
-                                   "`Quantidade máxima permitida: 10`")
+                raise GenericError(f"**Invalid quantity: {mode}**\n"
+                                   "`Maximum allowed quantity: 10`")
 
             await self.loop_amount.callback(self=self, inter=ctx, value=int(mode))
             return
 
         if mode not in ('current', 'queue', 'off'):
-            raise GenericError("Modo inválido! escolha entre: current/queue/off")
+            raise GenericError("Invalid way!Choose between: current/queue/off")
 
         await self.loop_mode.callback(self=self, inter=ctx, mode=mode)
 
@@ -2593,7 +2593,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Selecionar modo de repetição entre: atual / fila ou desativar.",
+        description=f"{desc_prefix}Select repetition mode between: current / queue or disable.",
         extras={"only_voiced": True}, cooldown=loop_cd, max_concurrency=loop_mc, dm_permission=False
     )
     async def loop_mode(
@@ -2603,7 +2603,7 @@ class Music(commands.Cog):
                 name="modo",
                 choices=[
                     disnake.OptionChoice(
-                        disnake.Localized("Current", data={disnake.Locale.pt_BR: "Música Atual"}), "current"
+                        disnake.Localized("Current", data={disnake.Locale.pt_BR: "Music Atual"}), "current"
                     ),
                     disnake.OptionChoice(
                         disnake.Localized("Queue", data={disnake.Locale.pt_BR: "Fila"}), "queue"
@@ -2623,23 +2623,23 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if mode == player.loop:
-            raise GenericError("**O modo de repetição selecionado já está ativo...**")
+            raise GenericError("**The repeat mode selected is already active...**")
 
         if mode == 'off':
             mode = False
             player.current.info["extra"]["track_loops"] = 0
             emoji = "⭕"
-            txt = ['desativou a repetição.', f"{emoji} **⠂{inter.author.mention}desativou a repetição.**"]
+            txt = ['disabled the repetition.', f"{emoji} **⠂{inter.author.mention}disabled the repetition.**"]
 
         elif mode == "current":
             player.current.info["extra"]["track_loops"] = 0
             emoji = "🔂"
-            txt = ["ativou a repetição da música atual.",
-                   f"{emoji} **⠂{inter.author.mention} ativou a repetição da música atual.**"]
+            txt = ["activated the repetition of the current music.",
+                   f"{emoji} **⠂{inter.author.mention} activated the repetition of the current music.**"]
 
         else:  # queue
             emoji = "🔁"
-            txt = ["ativou a repetição da fila.", f"{emoji} **⠂{inter.author.mention} ativou a repetição da fila.**"]
+            txt = ["activated the repetition of the queue.", f"{emoji} **⠂{inter.author.mention} activated the repetition of the queue.**"]
 
         player.loop = mode
 
@@ -2651,13 +2651,13 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Definir quantidade de repetições da música atual.",
+        description=f"{desc_prefix}Define the amount of current music repetitions.",
         extras={"only_voiced": True}, cooldown=loop_cd, max_concurrency=loop_mc, dm_permission=False
     )
     async def loop_amount(
             self,
             inter: disnake.AppCmdInter,
-            value: int = commands.Param(name="valor", description="número de repetições.")
+            value: int = commands.Param(name="valor", description="number of repetitions.")
     ):
 
         try:
@@ -2670,9 +2670,9 @@ class Music(commands.Cog):
         player.current.info["extra"]["track_loops"] = value
 
         txt = [
-            f"definiu a quantidade de repetições da música "
+            f"defined the amount of repetitions of music "
             f"[`{(fix_characters(player.current.title, 25))}`](<{player.current.uri or player.current.search_uri}>) para **{value}**.",
-            f"🔄 **⠂{inter.author.mention} definiu a quantidade de repetições da música para [{value}]:**\n"
+            f"🔄 **⠂{inter.author.mention} defined the amount of music repetitions to [{value}]:**\n"
             f"╰[`{player.current.title}`](<{player.current.uri or player.current.search_uri}>)"
         ]
 
@@ -2683,7 +2683,7 @@ class Music(commands.Cog):
     @is_dj()
     @has_player()
     @check_voice()
-    @pool_command(name="remove", aliases=["r", "del"], description="Remover uma música específica da fila.",
+    @pool_command(name="remove", aliases=["r", "del"], description="Remove a specific line from the queue.",
                   only_voiced=True, max_concurrency=remove_mc, extras={"flags": case_sensitive_args},
                   usage="{prefix}{cmd} [nome]\nEx: {prefix}{cmd} sekai")
     async def remove_legacy(self, ctx: CustomContext, *, flags: str = ""):
@@ -2691,7 +2691,7 @@ class Music(commands.Cog):
         args, unknown = ctx.command.extras['flags'].parse_known_args(flags.split())
 
         if not unknown:
-            raise GenericError("**Você não adicionou o nome da música.**")
+            raise GenericError("**You don't add the name of music.**")
 
         await self.remove.callback(self=self, inter=ctx, query=" ".join(unknown), case_sensitive=args.casesensitive)
 
@@ -2699,16 +2699,16 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Remover uma música específica da fila.",
+        description=f"{desc_prefix}Remove a specific line from the queue.",
         extras={"only_voiced": True}, max_concurrency=remove_mc, dm_permission=False
     )
     async def remove(
             self,
             inter: disnake.AppCmdInter,
-            query: str = commands.Param(name="nome", description="Nome da música completo."),
+            query: str = commands.Param(name="nome", description="Complete Music Name."),
             case_sensitive: bool = commands.Param(
                 name="nome_exato", default=False,
-                description="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.",
+                description="Search by Songs with the exact sentence in the name of music instead of search word by word.",
 
             )
     ):
@@ -2721,7 +2721,7 @@ class Music(commands.Cog):
         try:
             index = queue_track_index(inter, bot, query, case_sensitive=case_sensitive)[0][0]
         except IndexError:
-            raise GenericError(f"**Não há músicas na fila com o nome: {query}**")
+            raise GenericError(f"**There are no songs in line with the name: {query}**")
 
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
@@ -2730,8 +2730,8 @@ class Music(commands.Cog):
         player.queue.remove(track)
 
         txt = [
-            f"removeu a música [`{(fix_characters(track.title, 25))}`](<{track.uri or track.search_uri}>) da fila.",
-            f"♻️ **⠂{inter.author.mention} removeu a música da fila:**\n╰[`{track.title}`](<{track.uri or track.search_uri}>)"
+            f"Remove Music [`{(fix_characters(track.title, 25))}`](<{track.uri or track.search_uri}>) in line.",
+            f"♻️ **⠂{inter.author.mention} Removed the music from the queue:**\n╰[`{track.title}`](<{track.uri or track.search_uri}>)"
         ]
 
         await self.interaction_message(inter, txt, emoji="♻️")
@@ -2744,7 +2744,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="readd", aliases=["readicionar", "rdd"], only_voiced=True, cooldown=queue_manipulation_cd,
-                  max_concurrency=remove_mc, description="Readicionar as músicas tocadas na fila.")
+                  max_concurrency=remove_mc, description="Reading the picked songs in line.")
     async def readd_legacy(self, ctx: CustomContext):
         await self.readd_songs.callback(self=self, inter=ctx)
 
@@ -2752,7 +2752,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Readicionar as músicas tocadas na fila.", dm_permission=False,
+        description=f"{desc_prefix}Reading the picked songs in line.", dm_permission=False,
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def readd_songs(self, inter: disnake.AppCmdInter):
@@ -2765,7 +2765,7 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if not player.played and not player.failed_tracks:
-            raise GenericError("**Não há músicas tocadas.**")
+            raise GenericError("**There are no songs played.**")
 
         qsize = len(player.played) + len(player.failed_tracks)
 
@@ -2777,8 +2777,8 @@ class Music(commands.Cog):
         player.failed_tracks.clear()
 
         txt = [
-            f"readicionou [{qsize}] música{(s:='s'[:qsize^1])} tocada{s} na fila.",
-            f"🎶 **⠂{inter.author.mention} readicionou {qsize} música{s} na fila.**"
+            f"readded [{qsize}] music{(s:='s'[:qsize^1])} tocada{s} na fila.",
+            f"🎶 **⠂{inter.author.mention} readded {qsize} music{s} na fila.**"
         ]
 
         await self.interaction_message(inter, txt, emoji="🎶")
@@ -2794,7 +2794,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="rotate", aliases=["rt", "rotacionar"], only_voiced=True,
-                  description="Rotacionar a fila para a música especificada.",
+                  description="Rotate the queue to the specified music.",
                   cooldown=queue_manipulation_cd, max_concurrency=remove_mc, extras={"flags": case_sensitive_args},
                   usage="{prefix}{cmd} [nome]\nEx: {prefix}{cmd} sekai")
     async def rotate_legacy(self, ctx: CustomContext, *, flags: str = ""):
@@ -2802,7 +2802,7 @@ class Music(commands.Cog):
         args, unknown = ctx.command.extras['flags'].parse_known_args(flags.split())
 
         if not unknown:
-            raise GenericError("**Você não adicionou o nome da música.**")
+            raise GenericError("**You do not add the name of music.**")
 
         await self.rotate.callback(self=self, inter=ctx, query=" ".join(unknown), case_sensitive=args.casesensitive)
 
@@ -2811,16 +2811,16 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Rotacionar a fila para a música especificada.", dm_permission=False,
+        description=f"{desc_prefix}Rotate the queue to the specified music.", dm_permission=False,
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def rotate(
             self,
             inter: disnake.AppCmdInter,
-            query: str = commands.Param(name="nome", description="Nome da música completo."),
+            query: str = commands.Param(name="nome", description="Complete Music Name."),
             case_sensitive: bool = commands.Param(
                 name="nome_exato", default=False,
-                description="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.",
+                description="Searchr by Songs with the exact phrase in the name of music instead of searchr word by word.",
             )
     ):
 
@@ -2832,7 +2832,7 @@ class Music(commands.Cog):
         index = queue_track_index(inter, bot, query, case_sensitive=case_sensitive)
 
         if not index:
-            raise GenericError(f"**Não há músicas na fila com o nome: {query}**")
+            raise GenericError(f"**There are no songs in line with the name: {query}**")
 
         index = index[0][0]
 
@@ -2841,7 +2841,7 @@ class Music(commands.Cog):
         track = (player.queue + player.queue_autoplay)[index]
 
         if index <= 0:
-            raise GenericError(f"**A música **[`{track.title}`](<{track.uri or track.search_uri}>) já é a próxima da fila.")
+            raise GenericError(f"**A music **[`{track.title}`](<{track.uri or track.search_uri}>) já é a próxima da fila.")
 
         if track.autoplay:
             player.queue_autoplay.rotate(0 - (index - len(player.queue)))
@@ -2849,15 +2849,15 @@ class Music(commands.Cog):
             player.queue.rotate(0 - (index))
 
         txt = [
-            f"rotacionou a fila para a música [`{(fix_characters(track.title, limit=25))}`](<{track.uri or track.search_uri}>).",
-            f"🔃 **⠂{inter.author.mention} rotacionou a fila para a música:**\n╰[`{track.title}`](<{track.uri or track.search_uri}>)."
+            f"Rotated the line to music [`{(fix_characters(track.title, limit=25))}`](<{track.uri or track.search_uri}>).",
+            f"🔃 **⠂{inter.author.mention} Rotated the line to music:**\n╰[`{track.title}`](<{track.uri or track.search_uri}>)."
         ]
 
         if isinstance(inter, disnake.MessageInteraction):
             player.set_command_log(text=f"{inter.author.mention} " + txt[0], emoji="🔃")
         else:
             await self.interaction_message(inter, txt, emoji="🔃", components=[
-                disnake.ui.Button(emoji="▶️", label="Tocar agora", custom_id=PlayerControls.embed_forceplay),
+                disnake.ui.Button(emoji="▶️", label="Tap agora", custom_id=PlayerControls.embed_forceplay),
             ])
 
         await player.update_message()
@@ -2869,7 +2869,7 @@ class Music(commands.Cog):
     @check_voice()
     @commands.bot_has_guild_permissions(manage_threads=True)
     @pool_command(name="songrequestthread", aliases=["songrequest", "srt"], only_voiced=True,
-                  description="Criar uma thread/conversa temporária para song-request (pedido de música)")
+                  description="Create a thread/temporary conversation for Song-Request (Music Request)")
     async def song_request_thread_legacy(self, ctx: CustomContext):
 
         await self.song_request_thread.callback(self=self, inter=ctx)
@@ -2878,7 +2878,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(extras={"only_voiced": True}, cooldown=song_request_thread_cd, dm_permission=False,
-                            description=f"{desc_prefix}Criar uma thread/conversa temporária para song-request (pedido de música)")
+                            description=f"{desc_prefix}Create a thread/temporary conversation for Song-Request (Music Request)")
     async def song_request_thread(self, inter: disnake.AppCmdInter):
 
         try:
@@ -2889,44 +2889,44 @@ class Music(commands.Cog):
             guild = inter.guild
 
         if not self.bot.intents.message_content:
-            raise GenericError("**Atualmente não tenho a intent de message-content para conferir "
-                               "o conteúdo de mensagens**")
+            raise GenericError("**I currently don't have the Message-Content Intent to check "
+                               "The message content**")
 
         player: LavalinkPlayer = bot.music.players[guild.id]
 
         if player.static:
-            raise GenericError("**Você não pode usar esse comando com um canal de song-request configurado.**")
+            raise GenericError("**You cannot use this command with a configured Song-Request channel.**")
 
         if player.has_thread:
-            raise GenericError("**Já há uma thread/conversa ativa no player.**")
+            raise GenericError("**There is already a thread/active conversation on the player.**")
 
         if not isinstance(player.text_channel, disnake.TextChannel):
-            raise GenericError("**O player-controller está ativo em um canal incompatível com "
-                               "criação de thread/conversa.**")
+            raise GenericError("**Player-Controller is active on a channel incompatible with "
+                               "Thread/conversation creation.**")
 
         if not player.controller_mode:
-            raise GenericError("**A skin/aparência atual não é compatível com o sistem de song-request "
-                               "via thread/conversa\n\n"
-                               "Nota:** `Esse sistema requer uma skin que use botões.`")
+            raise GenericError("**Skin/current appearance is not compatible with the Song-Request system "
+                               "viaThread/conversa\n\n"
+                               "Note: ** `This system requires a skin that uses buttons.`")
 
         if not player.text_channel.permissions_for(guild.me).send_messages:
-            raise GenericError(f"**{bot.user.mention} não possui permissão enviar mensagens no canal {player.text_channel.mention}.**")
+            raise GenericError(f"**{bot.user.mention} does not have permission to send messages on the channel{player.text_channel.mention}.**")
 
         if not player.text_channel.permissions_for(guild.me).create_public_threads:
-            raise GenericError(f"**{bot.user.mention} não possui permissão de criar tópicos públicos.**")
+            raise GenericError(f"**{bot.user.mention} It is not allowed to create public topics.**")
 
         if not [m for m in player.guild.me.voice.channel.members if not m.bot and
                 player.text_channel.permissions_for(m).send_messages_in_threads]:
-            raise GenericError(f"**Não há membros no canal <#{player.channel_id}> com permissão de enviar mensagens "
-                               f"em tópicos no canal {player.text_channel.mention}")
+            raise GenericError(f"**There are no members on the channel <#{player.channel_id}> With permission to send messages "
+                               f"in topics on the channel{player.text_channel.mention}")
 
         await inter.response.defer(ephemeral=True)
 
         thread = await player.message.create_thread(name=f"{bot.user.name} temp. song-request", auto_archive_duration=10080)
 
         txt = [
-            "Ativou o sistema de thread/conversa temporária para pedido de música.",
-            f"💬 **⠂{inter.author.mention} criou uma [thread/conversa]({thread.jump_url}) temporária para pedido de música.**"
+            "Activated the thread/temporary conversation system for music request.",
+            f"💬 **⠂{inter.author.mention}Created a [thread/conversation]({thread.jump_url}) temporary for music request.**"
         ]
 
         await self.interaction_message(inter, txt, emoji="💬", defered=True, force=True)
@@ -2938,7 +2938,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @pool_command(name="nightcore", aliases=["nc"], only_voiced=True, cooldown=nightcore_cd, max_concurrency=nightcore_mc,
-                  description="Ativar/Desativar o efeito nightcore (Música acelerada com tom mais agudo).")
+                  description="Activate/disable the nightcore effect (accelerated music with sharper tone).")
     async def nightcore_legacy(self, ctx: CustomContext):
 
         await self.nightcore.callback(self=self, inter=ctx)
@@ -2947,7 +2947,7 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Ativar/Desativar o efeito nightcore (Música acelerada com tom mais agudo).",
+        description=f"{desc_prefix}Activate/disable the nightcore effect (accelerated music with sharper tone).",
         extras={"only_voiced": True}, cooldown=nightcore_cd, max_concurrency=nightcore_mc, dm_permission=False,
     )
     async def nightcore(self, inter: disnake.AppCmdInter):
@@ -2969,7 +2969,7 @@ class Music(commands.Cog):
             await player.update_filters()
             txt = "desativou"
 
-        txt = [f"{txt} o efeito nightcore.", f"🇳 **⠂{inter.author.mention} {txt} o efeito nightcore.**"]
+        txt = [f"{txt} The Nightcore effect.", f"🇳 **⠂{inter.author.mention} {txt} The Nightcore effect.**"]
 
         await self.interaction_message(inter, txt, emoji="🇳")
 
@@ -2977,11 +2977,11 @@ class Music(commands.Cog):
     np_cd = commands.CooldownMapping.from_cooldown(1, 7, commands.BucketType.member)
 
     @commands.command(name="nowplaying", aliases=["np", "npl", "current", "tocando", "playing"],
-                 description="Exibir informações da música que você está ouvindo no momento.", cooldown=np_cd)
+                 description="Display music from the music you are listening to at the moment.", cooldown=np_cd)
     async def now_playing_legacy(self, ctx: CustomContext):
         await self.now_playing.callback(self=self, inter=ctx)
 
-    @commands.slash_command(description=f"{desc_prefix}Exibir info da música que que você está ouvindo (em qualquer servidor).",
+    @commands.slash_command(description=f"{desc_prefix}Display Music Info that you are listening to (on any server).",
                             dm_permission=False, cooldown=np_cd, extras={"allow_private": True})
     async def now_playing(self, inter: disnake.AppCmdInter):
 
@@ -3011,8 +3011,8 @@ class Music(commands.Cog):
                 except AttributeError:
                     slashcmd = "/now_playing"
 
-                raise GenericError("**Você deve estar conectado em um canal de voz do servidor atual onde há player ativo...**\n"
-                                   f"`Nota: Caso esteja ouvindo em outro servidor você pode usar o comando` {slashcmd}")
+                raise GenericError("**You must be connected to a voice channel of the current server where there is an active player...**\n"
+                                   f"`Note: If you are listening to another server you can use the command` {slashcmd}")
 
             for bot in self.bot.pool.get_guild_bots(inter.guild_id):
 
@@ -3026,10 +3026,10 @@ class Music(commands.Cog):
                         break
 
         if not player:
-            raise GenericError("**Você deve estar conectado em um canal de voz com player ativo...**")
+            raise GenericError("**You must be connected to an active player voice channel...**")
 
         if not player.current:
-            raise GenericError(f"**No momento não estou tocando algo no canal {player.last_channel.mention}**")
+            raise GenericError(f"**At the moment I'm not playing something on the channel {player.last_channel.mention}**")
 
         guild_data = await player.bot.get_data(inter.guild_id, db_name=DBModel.guilds)
 
@@ -3045,7 +3045,7 @@ class Music(commands.Cog):
         footer_kw = {}
 
         if player.current.is_stream:
-            txt += "> 🔴 **⠂Transmissão ao vivo**\n"
+            txt += "> 🔴 **⠂Live transmission**\n"
         else:
             progress = ProgressBar(
                 player.position,
@@ -3059,74 +3059,74 @@ class Music(commands.Cog):
         txt += f"> 👤 **⠂Uploader:** {player.current.authors_md}\n"
 
         if player.current.album_name:
-            txt += f"> 💽 **⠂Álbum:** [`{fix_characters(player.current.album_name, limit=20)}`]({player.current.album_url})\n"
+            txt += f"> 💽 **⠂Album:** [`{fix_characters(player.current.album_name, limit=20)}`]({player.current.album_url})\n"
 
         if not player.current.autoplay:
-            txt += f"> ✋ **⠂Solicitado por:** <@{player.current.requester}>\n"
+            txt += f"> ✋ **⠂Requested by:** <@{player.current.requester}>\n"
         else:
             try:
-                mode = f" [`Recomendação`]({player.current.info['extra']['related']['uri']})"
+                mode = f" [`Recommendation`]({player.current.info['extra']['related']['uri']})"
             except:
-                mode = "`Recomendação`"
-            txt += f"> 👍 **⠂Adicionado via:** {mode}\n"
+                mode = "`Recommendation`"
+            txt += f"> 👍 **⠂Added via:** {mode}\n"
 
         if player.current.playlist_name:
             txt += f"> 📑 **⠂Playlist:** [`{fix_characters(player.current.playlist_name, limit=20)}`]({player.current.playlist_url})\n"
 
         try:
-            txt += f"> *️⃣ **⠂Canal de voz:** {player.guild.me.voice.channel.jump_url}\n"
+            txt += f"> *️⃣ **⠂Voice channel:** {player.guild.me.voice.channel.jump_url}\n"
         except AttributeError:
             pass
 
         txt += f"> 🔊 **⠂Volume:** `{player.volume}%`\n"
 
-        components = [disnake.ui.Button(custom_id=f"np_{inter.author.id}", label="Atualizar", emoji="🔄")]
+        components = [disnake.ui.Button(custom_id=f"np_{inter.author.id}", label="To update", emoji="🔄")]
 
         if player.guild_id != inter.guild_id:
 
             if player.current and not player.paused and (listeners:=len([m for m in player.last_channel.members if not m.bot and (not m.voice.self_deaf or not m.voice.deaf)])) > 1:
-                txt += f"> 🎧 **⠂Ouvintes atuais:** `{listeners}`\n"
+                txt += f"> 🎧 **⠂Current listeners:** `{listeners}`\n"
 
-            txt += f"> ⏱️ **⠂Player ativo:** <t:{player.uptime}:R>\n"
+            txt += f"> ⏱️ **⠂Active player:** <t:{player.uptime}:R>\n"
 
             try:
                 footer_kw = {"icon_url": player.guild.icon.with_static_format("png").url}
             except AttributeError:
                 pass
 
-            footer_kw["text"] = f"No servidor: {player.guild.name} [ ID: {player.guild.id} ]"
+            footer_kw["text"] = f"Non -server: {player.guild.name} [ ID: {player.guild.id} ]"
 
         else:
             try:
                 if player.bot.user.id != self.bot.user.id:
-                    footer_kw["text"] = f"Bot selecionado: {player.bot.user.display_name}"
+                    footer_kw["text"] = f"Selected bot: {player.bot.user.display_name}"
                     footer_kw["icon_url"] = player.bot.user.display_avatar.url
             except AttributeError:
                 pass
 
         if player.keep_connected:
-            txt += "> ♾️ **⠂Modo 24/7:** `Ativado`\n"
+            txt += "> ♾️ **⠂24/7 mode: ** `activated`\n"
 
         if player.queue or player.queue_autoplay:
 
             if player.guild_id == inter.guild_id:
 
-                txt += f"### 🎶 ⠂Próximas músicas ({(qsize := len(player.queue + player.queue_autoplay))}):\n" + (
+                txt += f"### 🎶 ⠂Next Songs({(qsize := len(player.queue + player.queue_autoplay))}):\n" + (
                             "\n").join(
                     f"> `{n + 1})` [`{fix_characters(t.title, limit=28)}`](<{t.uri}>)\n" \
                     f"> `⏲️ {time_format(t.duration) if not t.is_stream else '🔴 Ao vivo'}`" + (
-                        f" - `Repetições: {t.track_loops}`" if t.track_loops else "") + \
-                    f" **|** " + (f"`✋` <@{t.requester}>" if not t.autoplay else f"`👍⠂Recomendada`") for n, t in
+                        f" - `Repetition: {t.track_loops}`" if t.track_loops else "") + \
+                    f" **|** " + (f"`✋` <@{t.requester}>" if not t.autoplay else f"`👍⠂recomendada`") for n, t in
                     enumerate(itertools.islice(player.queue + player.queue_autoplay, 3))
                 )
 
                 if qsize > 3:
                     components.append(
-                        disnake.ui.Button(custom_id=PlayerControls.queue, label="Ver lista completa",
+                        disnake.ui.Button(custom_id=PlayerControls.queue, label="See full list",
                                           emoji="<:music_queue:703761160679194734>"))
 
             elif player.queue:
-                txt += f"> 🎶 **⠂Músicas na fila:** `{len(player.queue)}`\n"
+                txt += f"> 🎶 **⠂Songs from Fala:** `{len(player.queue)}`\n"
 
         if player.static and player.guild_id == inter.guild_id:
             if player.message:
@@ -3134,11 +3134,11 @@ class Music(commands.Cog):
                     disnake.ui.Button(url=player.message.jump_url, label="Ir p/ player-controller",
                                       emoji="🔳"))
             elif player.text_channel:
-                txt += f"\n\n`Acesse o player-controller no canal:` {player.text_channel.mention}"
+                txt += f"\n\n`Access the Player-Controller on the channel:` {player.text_channel.mention}"
 
         embed = disnake.Embed(description=txt, color=self.bot.get_color(player.guild.me))
 
-        embed.set_author(name=("⠂Tocando agora:" if inter.guild_id == player.guild_id else "Você está ouvindo agora:") if not player.paused else "⠂Música atual:",
+        embed.set_author(name=("⠂Playing now:" if inter.guild_id == player.guild_id else "You are listening now:") if not player.paused else "⠂Music atual:",
                          icon_url=music_source_image(player.current.info["sourceName"]))
 
         embed.set_thumbnail(url=player.current.thumb)
@@ -3158,7 +3158,7 @@ class Music(commands.Cog):
             return
 
         if inter.data.custom_id != f"np_{inter.author.id}":
-            await inter.send("Você não pode clicar nesse botão...", ephemeral=True)
+            await inter.send("You cannot click this button...", ephemeral=True)
             return
 
         try:
@@ -3174,13 +3174,13 @@ class Music(commands.Cog):
     @has_source()
     @check_voice()
     @pool_command(name="controller", aliases=["ctl"], only_voiced=True, cooldown=controller_cd,
-                  max_concurrency=controller_mc, description="Enviar player controller para um canal específico/atual.")
+                  max_concurrency=controller_mc, description="Send Player Controller to a specific/current channel.")
     async def controller_legacy(self, ctx: CustomContext):
         await self.controller.callback(self=self, inter=ctx)
 
     @has_source()
     @check_voice()
-    @commands.slash_command(description=f"{desc_prefix}Enviar player controller para um canal específico/atual.",
+    @commands.slash_command(description=f"{desc_prefix}Send Player Controller to a specific/current channel.",
                             extras={"only_voiced": True}, cooldown=controller_cd, max_concurrency=controller_mc,
                             dm_permission=False)
     async def controller(self, inter: disnake.AppCmdInter):
@@ -3197,10 +3197,10 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[guild.id]
 
         if player.static:
-            raise GenericError("Esse comando não pode ser usado no modo fixo do player.")
+            raise GenericError("This command cannot be used in the Fixed Player mode.")
 
         if player.has_thread:
-            raise GenericError("**Esse comando não pode ser usado com uma conversa ativa na "
+            raise GenericError("**This command cannot be used with an active conversation in "
                                f"[mensagem]({player.message.jump_url}) do player.**")
 
         if not inter.response.is_done():
@@ -3213,18 +3213,18 @@ class Music(commands.Cog):
             try:
 
                 player.set_command_log(
-                    text=f"{inter.author.mention} moveu o player-controller para o canal {inter.channel.mention}.",
+                    text=f"{inter.author.mention} Player-Controller moved to the channel {inter.channel.mention}.",
                     emoji="💠"
                 )
 
                 embed = disnake.Embed(
-                    description=f"💠 **⠂{inter.author.mention} moveu o player-controller para o canal:** {channel.mention}",
+                    description=f"💠 **⠂{inter.author.mention} Player-Controller moved to the channel:** {channel.mention}",
                     color=self.bot.get_color(guild.me)
                 )
 
                 try:
                     if bot.user.id != self.bot.user.id:
-                        embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                        embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
                 except AttributeError:
                     pass
 
@@ -3240,12 +3240,12 @@ class Music(commands.Cog):
         await player.invoke_np()
 
         if not isinstance(inter, CustomContext):
-            await inter.edit_original_message("**Player reenviado com sucesso!**")
+            await inter.edit_original_message("**Player successfully resubmitted!**")
 
     @is_dj()
     @has_player()
     @check_voice()
-    @commands.user_command(name=disnake.Localized("Add DJ", data={disnake.Locale.pt_BR: "Adicionar DJ"}),
+    @commands.user_command(name=disnake.Localized("Add DJ", data={disnake.Locale.pt_BR: "Add DJ"}),
                            extras={"only_voiced": True}, dm_permission=False)
     async def adddj_u(self, inter: disnake.UserCommandInteraction):
         await self.add_dj(interaction=inter, user=inter.target)
@@ -3254,7 +3254,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="adddj", aliases=["adj"], only_voiced=True,
-                  description="Adicionar um membro à lista de DJ's na sessão atual do player.",
+                  description="Add a member to the DJ's list to the current player session.",
                   usage="{prefix}{cmd} [id|nome|@user]\nEx: {prefix}{cmd} @membro")
     async def add_dj_legacy(self, ctx: CustomContext, user: disnake.Member):
         await self.add_dj.callback(self=self, inter=ctx, user=user)
@@ -3263,13 +3263,13 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Adicionar um membro à lista de DJ's na sessão atual do player.",
+        description=f"{desc_prefix}Add a member to the DJ's list to the current player session.",
         extras={"only_voiced": True}, dm_permission=False
     )
     async def add_dj(
             self,
             inter: disnake.AppCmdInter, *,
-            user: disnake.User = commands.Param(name="membro", description="Membro a ser adicionado.")
+            user: disnake.User = commands.Param(name="membro", description="Limb to be added.")
     ):
 
         error_text = None
@@ -3288,27 +3288,27 @@ class Music(commands.Cog):
         user = guild.get_member(user.id)
 
         if user.bot:
-            error_text = "**Você não pode adicionar um bot na lista de DJ's.**"
+            error_text = "**You cannot add a bot to the DJ's list.**"
         elif user == inter.author:
-            error_text = "**Você não pode adicionar a si mesmo na lista de DJ's.**"
+            error_text = "**You cannot add yourself to the DJ's list.**"
         elif user.guild_permissions.manage_channels:
-            error_text = f"você não pode adicionar o membro {user.mention} na lista de DJ's (ele(a) possui permissão de **gerenciar canais**)."
+            error_text = f"You cannot add the member {user.mention} In the list of DJ's (he / she has permission to manage channels **)."
         elif user.id == player.player_creator:
-            error_text = f"**O membro {user.mention} é o criador do player...**"
+            error_text = f"**The member {user.mention} is the creator of the player...**"
         elif user.id in player.dj:
-            error_text = f"**O membro {user.mention} já está na lista de DJ's**"
+            error_text = f"**The member {user.mention} is already on the list of DJ's**"
 
         if error_text:
             raise GenericError(error_text)
 
         player.dj.add(user.id)
 
-        text = [f"adicionou {user.mention} à lista de DJ's.",
-                f"🎧 **⠂{inter.author.mention} adicionou {user.mention} na lista de DJ's.**"]
+        text = [f"added {user.mention} at Lista de Dj's.",
+                f"🎧 **⠂{inter.author.mention} added {user.mention} In the list of DJ's.**"]
 
         if (player.static and channel == player.text_channel) or isinstance(inter.application_command,
                                                                             commands.InvokableApplicationCommand):
-            await inter.send(f"{user.mention} adicionado à lista de DJ's!{player.controller_link}")
+            await inter.send(f"{user.mention}Added to the list of DJ's!{player.controller_link}")
 
         await self.interaction_message(inter, txt=text, emoji="🎧")
 
@@ -3316,13 +3316,13 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Remover um membro da lista de DJ's na sessão atual do player.",
+        description=f"{desc_prefix}Remove a member from the DJ's list at the current player session.",
         extras={"only_voiced": True}, dm_permission=False
     )
     async def remove_dj(
             self,
             inter: disnake.AppCmdInter, *,
-            user: disnake.User = commands.Param(name="membro", description="Membro a ser adicionado.")
+            user: disnake.User = commands.Param(name="membro", description="Limb to be added.")
     ):
 
         try:
@@ -3342,20 +3342,20 @@ class Music(commands.Cog):
             if inter.author.guild_permissions.manage_guild:
                 player.player_creator = None
             else:
-                raise GenericError(f"**O membro {user.mention} é o criador do player.**")
+                raise GenericError(f"**The member {user.mention} It is the creator of the player.**")
 
         elif user.id not in player.dj:
-            GenericError(f"O membro {user.mention} não está na lista de DJ's")
+            GenericError(f"The member {user.mention} is not on the DJ's list")
 
         else:
             player.dj.remove(user.id)
 
-        text = [f"removeu {user.mention} da lista de DJ's.",
-                f"🎧 **⠂{inter.author.mention} removeu {user.mention} da lista de DJ's.**"]
+        text = [f"removed {user.mention} from the DJ's list.",
+                f"🎧 **⠂{inter.author.mention} removed {user.mention} from the list of DJ's.**"]
 
         if (player.static and channel == player.text_channel) or isinstance(inter.application_command,
                                                                             commands.InvokableApplicationCommand):
-            await inter.send(f"{user.mention} adicionado à lista de DJ's!{player.controller_link}")
+            await inter.send(f"{user.mention} Added to the list of DJ's!{player.controller_link}")
 
         await self.interaction_message(inter, txt=text, emoji="🎧")
 
@@ -3363,7 +3363,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="stop", aliases=["leave", "parar"], only_voiced=True,
-                  description="Parar o player e me desconectar do canal de voz.")
+                  description="Stop the player and disconnect me from the voice channel.")
     async def stop_legacy(self, ctx: CustomContext):
         await self.stop.callback(self=self, inter=ctx)
 
@@ -3371,7 +3371,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Parar o player e me desconectar do canal de voz.",
+        description=f"{desc_prefix}Stop the player and disconnect me from the voice channel.",
         extras={"only_voiced": True}, dm_permission=False
     )
     async def stop(self, inter: disnake.AppCmdInter):
@@ -3386,7 +3386,7 @@ class Music(commands.Cog):
             inter_destroy = inter
 
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
-        player.command_log = f"{inter.author.mention} **parou o player!**"
+        player.command_log = f"{inter.author.mention} **stopped the player!**"
 
         self.bot.pool.song_select_cooldown.get_bucket(inter).update_rate_limit()
 
@@ -3396,12 +3396,12 @@ class Music(commands.Cog):
 
             embed = disnake.Embed(
                 color=self.bot.get_color(guild.me),
-                description=f"🛑 **⠂{inter.author.mention} parou o player.**"
+                description=f"🛑 **⠂{inter.author.mention} stopped the player.**"
             )
 
             try:
                 if bot.user.id != self.bot.user.id:
-                    embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                    embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
             except AttributeError:
                 pass
 
@@ -3422,7 +3422,7 @@ class Music(commands.Cog):
     @pool_command(
         name="savequeue", aliases=["sq", "svq"],
         only_voiced=True, cooldown=queue_manipulation_cd, max_concurrency=remove_mc,
-        description="Experimental: Salvar a música e fila atual pra reusá-los a qualquer momento."
+        description="Experimental: Save the current music and queue to use them at any time."
     )
     async def savequeue_legacy(self, ctx: CustomContext):
         await self.save_queue.callback(self=self, inter=ctx)
@@ -3431,7 +3431,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Experimental: Salvar a música e fila atual pra reusá-los a qualquer momento.",
+        description=f"{desc_prefix}Experimental: Save the current music and queue to use them at any time.",
         extras={"only_voiced": True}, dm_permission=False, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def save_queue(self, inter: disnake.AppCmdInter):
@@ -3460,7 +3460,7 @@ class Music(commands.Cog):
             tracks.append(t.info)
 
         if len(tracks) < 3:
-            raise GenericError(f"**É necessário ter no mínimo 3 músicas pra salvar (atual e/ou na fila)**")
+            raise GenericError(f"**It is necessary to have at least 3 songs to save (current and/or in line)**")
 
         if not os.path.isdir(f"./local_database/saved_queues_v1/users"):
             os.makedirs(f"./local_database/saved_queues_v1/users")
@@ -3487,17 +3487,17 @@ class Music(commands.Cog):
 
         embed = disnake.Embed(
             color=bot.get_color(guild.me),
-            description=f"### {inter.author.mention}: A fila foi salva com sucesso!!\n"
-                        f"**Músicas salvas:** `{len(tracks)}`\n"
-                        "### Como usar?\n"
-                        f"* Usando o comando {slashcmd} (selecionando no preenchimento automático da busca)\n"
-                        "* Clicando no botão/select de tocar favorito/integração do player.\n"
-                        f"* Usando o comando {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name} "
-                        "sem incluir um nome ou link de uma música/vídeo."
+            description=f"### {inter.author.mention}: The line was successfully saved!!\n"
+                        f"**songsSalvas:** `{len(tracks)}`\n"
+                        "### How to use?\n"
+                        f"* Using the command{slashcmd} (Selecting in the automatic completion of Search)\n"
+                        "* Clicking the Player's favorite TAP button/select.\n"
+                        f"* Using the command {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name} "
+                        "without including a name or link of a music/video."
         )
 
-        embed.set_footer(text="Nota: Esse é um recurso muito experimental, a fila salva pode sofrer alterações ou ser "
-                              "removida em futuros updates")
+        embed.set_footer(text="NOTE: This is a very experimental resource, Save Row may change or be "
+                              "removed in future updates")
 
         if isinstance(inter, CustomContext):
             await inter.reply(embed=embed)
@@ -3515,14 +3515,14 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="shuffle", aliases=["sf", "shf", "sff", "misturar"], only_voiced=True,
-                  description="Misturar as músicas da fila", cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
+                  description="Mix the Songs in the line", cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
     async def shuffle_legacy(self, ctx: CustomContext):
         await self.shuffle_.callback(self, inter=ctx)
 
     @is_dj()
     @q.sub_command(
         name="shuffle",
-        description=f"{desc_prefix}Misturar as músicas da fila",
+        description=f"{desc_prefix}Mix the Songs in the line",
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
     async def shuffle_(self, inter: disnake.AppCmdInter):
 
@@ -3534,14 +3534,14 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if len(player.queue) < 3:
-            raise GenericError("**A fila tem que ter no mínimo 3 músicas para ser misturada.**")
+            raise GenericError("**The line has to have at least 3 songs to be mixed.**")
 
         shuffle(player.queue)
 
         await self.interaction_message(
             inter,
-            ["misturou as músicas da fila.",
-             f"🔀 **⠂{inter.author.mention} misturou as músicas da fila.**"],
+            ["Mixed the Songs in line.",
+             f"🔀 **⠂{inter.author.mention} Mixed the Songs in line.**"],
             emoji="🔀"
         )
 
@@ -3549,13 +3549,13 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="reverse", aliases=["invert", "inverter", "rv"], only_voiced=True,
-                  description="Inverter a ordem das músicas na fila", cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
+                  description="Invert the order of the Songs in line", cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
     async def reverse_legacy(self, ctx: CustomContext):
         await self.reverse.callback(self=self, inter=ctx)
 
     @is_dj()
     @q.sub_command(
-        description=f"{desc_prefix}Inverter a ordem das músicas na fila",
+        description=f"{desc_prefix}Invert the order of the Songs in line",
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def reverse(self, inter: disnake.AppCmdInter):
@@ -3568,13 +3568,13 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if len(player.queue) < 2:
-            raise GenericError("**A fila tem que ter no mínimo 2 músicas para inverter a ordem.**")
+            raise GenericError("**The line must have at least 2 songs to reverse the order.**")
 
         player.queue.reverse()
         await self.interaction_message(
             inter,
-            txt=["inverteu a ordem das músicas na fila.",
-                 f"🔄 **⠂{inter.author.mention} inverteu a ordem das músicas na fila.**"],
+            txt=["Inverted the order of the songs in line.",
+                 f"🔄 **⠂{inter.author.mention} He reversed the order of the Songs in line.**"],
             emoji="🔄"
         )
 
@@ -3582,14 +3582,14 @@ class Music(commands.Cog):
 
     @has_player()
     @check_voice()
-    @pool_command(name="queue", aliases=["q", "fila"], description="Exibir as músicas que estão na fila.",
+    @pool_command(name="queue", aliases=["q", "fila"], description="Display the Songs that are in line.",
                   only_voiced=True, max_concurrency=queue_show_mc)
     async def queue_show_legacy(self, ctx: CustomContext):
         await self.display.callback(self=self, inter=ctx)
 
     @commands.max_concurrency(1, commands.BucketType.member)
     @q.sub_command(
-        description=f"{desc_prefix}Exibir as músicas que estão na fila.", max_concurrency=queue_show_mc
+        description=f"{desc_prefix}Display the songs that are in line.", max_concurrency=queue_show_mc
     )
     async def display(self, inter: disnake.AppCmdInter):
 
@@ -3601,14 +3601,14 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if not player.queue and not player.queue_autoplay:
-            raise GenericError("**Não há músicas na fila.**")
+            raise GenericError("**There are no songs in line.**")
 
         view = QueueInteraction(bot, inter.author)
         embed = view.embed
 
         try:
             if bot.user.id != self.bot.user.id:
-                embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
         except AttributeError:
             pass
 
@@ -3636,34 +3636,34 @@ class Music(commands.Cog):
     adv_queue_flags = CommandArgparse()
 
     adv_queue_flags.add_argument('-songtitle', '-name', '-title', '-songname', nargs='+',
-                                 help="incluir nome que tiver na música.\nEx: -name NCS", default=[])
+                                 help="Include name you have in music.\nEx: -name NCS", default=[])
     adv_queue_flags.add_argument('-uploader', '-author', '-artist', nargs='+', default=[],
-                                 help="Remover músicas com o nome que tiver no autor/artista/uploader especificado.\nEx: -uploader sekai")
+                                 help="Remove Songs with the name you have in the specified author/artist/uploader. \ Nex: -Uploorder Sekai")
     adv_queue_flags.add_argument('-member', '-user', '-u', nargs='+', default=[],
-                                 help="Remover músicas pedidas pelo usuário especificado.\nEx: -user @user")
+                                 help="Remove Songs Orders by the specified user.\nEx: -user @user")
     adv_queue_flags.add_argument('-duplicates', '-dupes', '-duplicate', action='store_true',
-                                 help="Remover músicas duplicadas.")
+                                 help="Remove duplicate songs.")
     adv_queue_flags.add_argument('-playlist', '-list', '-pl', nargs='+', default=[],
-                                 help="Remover música que tiver com o nome especificado na playlist associada.\nEx: -playlist minhaplaylist")
+                                 help="Remove music you have with the name specified in the associated playlist. \ Nex: -PlayList MyPlaylist")
     adv_queue_flags.add_argument('-minimaltime', '-mintime', '-min', '-minduration', '-minduration', default=None,
-                                 help="Remover músicas com a duração mínima especificada.\nEx: -min 1:23.")
+                                 help="Remove Songs with the specified minimum duration.\nEx: -min 1:23.")
     adv_queue_flags.add_argument('-maxduration', '-maxtime', '-max', default=None,
-                                 help="Remover músicas com a duração máxima especificada.\nEx: -max 1:23.")
+                                 help="Remove Songs with the maximum specified duration.\nEx: -max 1:23.")
     adv_queue_flags.add_argument('-amount', '-counter', '-count', '-c', type=int, default=None,
-                                 help="Especificar uma quantidade de músicas para mover com o nome especificado.\nEx: -amount 5")
+                                 help="Specify a number of songs to move with the specified name.\nEx: -amount 5")
     adv_queue_flags.add_argument('-startposition', '-startpos', '-start', type=int, default=0,
-                                 help="Remover músicas a partir de uma posição inicial da fila.\nEx: -start 10")
+                                 help="Remove songs from a starting line in the line.\nEx: -start 10")
     adv_queue_flags.add_argument('-endposition', '-endpos', '-end', type=int, default=0,
-                                 help="Remover músicas da fila até uma posição específica na fila.\nEx: -end 15")
+                                 help="Remove Songs from the queue to a specific position in line.\nEx: -end 15")
     adv_queue_flags.add_argument('-absentmembers', '-absent', '-abs', action='store_true',
-                                 help="Remover músicas adicionads por membros que saíram do canal")
+                                 help="Remove Songs Adds by Members who left the channel")
 
     clear_flags = CommandArgparse(parents=[adv_queue_flags])
 
     @is_dj()
     @has_player()
     @check_voice()
-    @pool_command(name="clear", aliases=["limpar", "clearqueue"], description="Limpar a fila de música.",
+    @pool_command(name="clear", aliases=["limpar", "clearqueue"], description="Clean the music line.",
                   only_voiced=True,
                   extras={"flags": clear_flags}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
     async def clear_legacy(self, ctx: CustomContext, *, flags: str = ""):
@@ -3691,45 +3691,45 @@ class Music(commands.Cog):
     @check_voice()
     @q.sub_command(
         name="clear",
-        description=f"{desc_prefix}Limpar a fila de música.",
+        description=f"{desc_prefix}Clean the music line.",
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def clear(
             self,
             inter: disnake.AppCmdInter,
-            song_name: str = commands.Param(name="nome", description="Incluir um nome que tiver na música.",
+            song_name: str = commands.Param(name="nome", description="Include a name you have in music.",
                                             default=None),
             song_author: str = commands.Param(name="uploader",
-                                              description="Incluir um nome que tiver no autor/artista/uploader da música.",
+                                              description="includeANameYouHaveInTheAuthor/artist/uploaderOfMusic",
                                               default=None),
-            user: disnake.Member = commands.Param(name='membro',
-                                                  description="Incluir músicas pedidas pelo membro selecionado.",
+            user: disnake.Member = commands.Param(name='member',
+                                                  description="includeSongsRequestedByTheSelectedLimb.",
                                                   default=None),
-            duplicates: bool = commands.Param(name="duplicados", description="Incluir músicas duplicadas",
+            duplicates: bool = commands.Param(name="duplicate", description="Include duplicate songs",
                                               default=False),
-            playlist: str = commands.Param(description="Incluir nome que tiver na playlist.", default=None),
-            min_duration: str = commands.Param(name="duração_inicial",
-                                               description="incluir músicas com duração acima/igual (ex. 1:23).",
+            playlist: str = commands.Param(description="includeNameYouHaveOnThePlaylist.", default=None),
+            min_duration: str = commands.Param(name="length",
+                                               description="Include Songs last/equal lasting (Ex. 1:23).",
                                                default=None),
-            max_duration: str = commands.Param(name="duração_máxima",
-                                               description="Incluir músicas com duração máxima especificada (ex. 1:45).",
+            max_duration: str = commands.Param(name="maximum duration",
+                                               description="Include Songs with a specified maximum duration (Ex. 1:45).",
                                                default=None),
-            amount: int = commands.Param(name="quantidade", description="Quantidade de músicas para mover.",
+            amount: int = commands.Param(name="amount", description="Number of songs to move.",
                                          min_value=0, max_value=99, default=None),
-            range_start: int = commands.Param(name="posição_inicial",
-                                              description="incluir músicas da fila a partir da posição específicada.",
+            range_start: int = commands.Param(name="lynial position",
+                                              description="Include row songs from the specific position.",
                                               min_value=1.0, max_value=500.0, default=0),
-            range_end: int = commands.Param(name="posição_final",
-                                            description="incluir músicas da fila até a posição especificada.",
+            range_end: int = commands.Param(name="vicinal",
+                                            description="Include row songs to the specified position.",
                                             min_value=1.0, max_value=500.0, default=0),
-            absent_members: bool = commands.Param(name="membros_ausentes",
-                                                  description="Incluir músicas adicionads por membros que saíram do canal.",
+            absent_members: bool = commands.Param(name="absent members",
+                                                  description="Include Songs added by members who left the channel.",
                                                   default=False)
     ):
 
         if min_duration and max_duration:
             raise GenericError(
-                "Você deve escolher apenas uma das opções: **duração_abaixo_de** ou **duração_acima_de**.")
+                "You should choose only one of the options: ** durationLowers ** or ** durationAbove**.")
 
         try:
             bot = inter.music_bot
@@ -3776,25 +3776,25 @@ class Music(commands.Cog):
 
         if not filters and not range_start and not range_end:
             player.queue.clear()
-            txt = ['limpou a fila de música.', f'♻️ **⠂{inter.author.mention} limpou a fila de música.**']
+            txt = ['Cleaned the Music line.', f'♻️ **⠂{inter.author.mention} Cleaned the Music line.**']
 
         else:
 
             if range_start > 0 and range_end > 0:
 
                 if range_start >= range_end:
-                    raise GenericError("**A posição final deve ser maior que a posição inicial!**")
+                    raise GenericError("**The final position must be greater than the starting position!**")
 
                 song_list = list(player.queue)[range_start - 1: -(range_end - 1)]
-                txt.append(f"**Posição inicial da fila:** `{range_start}`\n"
-                           f"**Posição final da fila:** `{range_end}`")
+                txt.append(f"**Home Position:** `{range_start}`\n"
+                           f"**FINAL ROINING POSITION:** `{range_end}`")
 
             elif range_start > 0:
                 song_list = list(player.queue)[range_start - 1:]
-                txt.append(f"**Posição inicial da fila:** `{range_start}`")
+                txt.append(f"**Home Position:** `{range_start}`")
             elif range_end > 0:
                 song_list = list(player.queue)[:-(range_end - 1)]
-                txt.append(f"**Posição final da fila:** `{range_end}`")
+                txt.append(f"**FINAL ROINING POSITION:** `{range_end}`")
             else:
                 song_list = list(player.queue)
 
@@ -3878,24 +3878,24 @@ class Music(commands.Cog):
             duplicated_titles.clear()
 
             if not deleted_tracks:
-                await inter.send("Nenhuma música encontrada!", ephemeral=True)
+                await inter.send("No music found!", ephemeral=True)
                 return
 
             try:
                 final_filters.remove("song_name")
-                txt.append(f"**Inclui nome:** `{fix_characters(song_name)}`")
+                txt.append(f"**Includes name:** `{fix_characters(song_name)}`")
             except:
                 pass
 
             try:
                 final_filters.remove("song_author")
-                txt.append(f"**Inclui nome no uploader/artista:** `{fix_characters(song_author)}`")
+                txt.append(f"**Includes name in the uploader/artist:** `{fix_characters(song_author)}`")
             except:
                 pass
 
             try:
                 final_filters.remove("user")
-                txt.append(f"**Pedido pelo membro:** {user.mention}")
+                txt.append(f"**Requested by the member:** {user.mention}")
             except:
                 pass
 
@@ -3907,36 +3907,36 @@ class Music(commands.Cog):
 
             try:
                 final_filters.remove("time_below")
-                txt.append(f"**Com duração inicial/igual:** `{time_format(min_duration)}`")
+                txt.append(f"**With initial duration/equal:** `{time_format(min_duration)}`")
             except:
                 pass
 
             try:
                 final_filters.remove("time_above")
-                txt.append(f"**Com duração máxima:** `{time_format(max_duration)}`")
+                txt.append(f"**With maximum duration:** `{time_format(max_duration)}`")
             except:
                 pass
 
             try:
                 final_filters.remove("duplicates")
-                txt.append(f"**Músicas duplicadas**")
+                txt.append(f"**Songs duplicate**")
             except:
                 pass
 
             try:
                 final_filters.remove("absent_members")
-                txt.append("`Músicas pedidas por membros que saíram do canal.`")
+                txt.append("`Songs requested by members who left the channel.`")
             except:
                 pass
 
-            msg_txt = f"### ♻️ ⠂{inter.author.mention} removeu {deleted_tracks} música{'s'[:deleted_tracks^1]} da fila:\n" + "\n".join(f"[`{fix_characters(t.title, 45)}`](<{t.uri}>)" for t in tracklist[:7])
+            msg_txt = f"### ♻️ ⠂{inter.author.mention} removeu {deleted_tracks} music{'s'[:deleted_tracks^1]} da fila:\n" + "\n".join(f"[`{fix_characters(t.title, 45)}`](<{t.uri}>)" for t in tracklist[:7])
 
             if (trackcount:=(len(tracklist) - 7)) > 0:
-                msg_txt += f"\n`e mais {trackcount} música{'s'[:trackcount^1]}.`"
+                msg_txt += f"\n`e mais {trackcount} music{'s'[:trackcount^1]}.`"
 
             msg_txt += f"\n### ✅ ⠂Filtro{(t:='s'[:len(txt)^1])} usado{t}:\n" + '\n'.join(txt)
 
-            txt = [f"removeu {deleted_tracks} música{'s'[:deleted_tracks^1]} da fila via clear.", msg_txt]
+            txt = [f"removeu {deleted_tracks} music{'s'[:deleted_tracks^1]} da fila via clear.", msg_txt]
 
         try:
             kwargs = {"thumb": tracklist[0].thumb}
@@ -3948,17 +3948,17 @@ class Music(commands.Cog):
 
     move_queue_flags = CommandArgparse(parents=[adv_queue_flags])
     move_queue_flags.add_argument('-position', '-pos',
-                           help="Especificar uma posição de destino (opcional).\nEx: -pos 1",
+                           help="Specify a destination position (optional).\nEx: -pos 1",
                            type=int, default=None)
     move_queue_flags.add_argument('-casesensitive', '-cs',  action='store_true',
-                           help="Buscar por músicas com a frase exata no nome da música ao invés de buscar palavra por palavra.")
+                           help="Searchr by Songs with the exact phrase in the name of music instead of searchr word by word.")
 
     @check_queue_loading()
     @is_dj()
     @has_player()
     @check_voice()
     @pool_command(name="move", aliases=["movequeue", "moveadv", "moveadvanced", "moveq", "mq", "mv", "mover"],
-                  description="Mover músicas da fila.", only_voiced=True,
+                  description="Mover songs da fila.", only_voiced=True,
                   extras={"flags": move_queue_flags}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc)
     async def move_legacy(self, ctx: CustomContext, position: Optional[int] = None, *, flags: str = ""):
 
@@ -3994,41 +3994,41 @@ class Music(commands.Cog):
     @check_voice()
     @commands.slash_command(
         name="move",
-        description=f"{desc_prefix}Mover músicas da fila.",
+        description=f"{desc_prefix}Mover songs da fila.",
         extras={"only_voiced": True}, cooldown=queue_manipulation_cd, max_concurrency=remove_mc
     )
     async def move(
             self,
             inter: disnake.AppCmdInter,
-            song_name: str = commands.Param(name="nome", description="Incluir um nome que tiver na música.",
+            song_name: str = commands.Param(name="nome", description="Include a name you have in music.",
                                             default=None),
-            position: int = commands.Param(name="posição", description="Posição de destino na fila (Opcional).",
+            position: int = commands.Param(name="position", description="Destination position in line (optional).",
                                            min_value=1, max_value=900, default=1),
             song_author: str = commands.Param(name="uploader",
-                                              description="Incluir um nome que tiver no autor/artista/uploader da música.",
+                                              description="Include a name you have in the author/artist/uploader of music.",
                                               default=None),
-            user: disnake.Member = commands.Param(name='membro',
-                                                  description="Incluir músicas pedidas pelo membro selecionado.",
+            user: disnake.Member = commands.Param(name='member',
+                                                  description="Include songs requested by the selected limb.",
                                                   default=None),
-            duplicates: bool = commands.Param(name="duplicados", description="Incluir músicas duplicadas",
+            duplicates: bool = commands.Param(name="duplicate", description="Include duplicate songs",
                                               default=False),
-            playlist: str = commands.Param(description="Incluir nome que tiver na playlist.", default=None),
-            min_duration: str = commands.Param(name="duração_inicial",
-                                               description="incluir músicas com duração acima/igual (ex. 1:23).",
+            playlist: str = commands.Param(description="Include name you have on the playlist.", default=None),
+            min_duration: str = commands.Param(name="length",
+                                               description="incluir songs com duração acima/igual (ex. 1:23).",
                                                default=None),
-            max_duration: str = commands.Param(name="duração_máxima",
-                                               description="Incluir músicas com duração máxima especificada (ex. 1:45).",
+            max_duration: str = commands.Param(name="maximum duration",
+                                               description="Incluir songs com duração máxima especificada (ex. 1:45).",
                                                default=None),
-            amount: int = commands.Param(name="quantidade", description="Quantidade de músicas para mover.",
+            amount: int = commands.Param(name="amount", description="Number of songs to move.",
                                          min_value=0, max_value=99, default=None),
-            range_start: int = commands.Param(name="posição_inicial",
-                                              description="incluir músicas da fila a partir da posição específicada.",
+            range_start: int = commands.Param(name="lynial position",
+                                              description="Include row songs from the specific position.",
                                               min_value=1.0, max_value=500.0, default=0),
-            range_end: int = commands.Param(name="posição_final",
-                                            description="incluir músicas da fila até a posição especificada.",
+            range_end: int = commands.Param(name="vicinal",
+                                            description="include row songs to the specified position.",
                                             min_value=1.0, max_value=500.0, default=0),
-            absent_members: bool = commands.Param(name="membros_ausentes",
-                                                  description="Incluir músicas adicionads por membros que saíram do canal.",
+            absent_members: bool = commands.Param(name="absent members",
+                                                  description="Include Songs added by members who left the channel.",
                                                   default=False),
     ):
 
@@ -4047,7 +4047,7 @@ class Music(commands.Cog):
 
         if min_duration and max_duration:
             raise GenericError(
-                "Você deve escolher apenas uma das opções: **duração_abaixo_de** ou **duração_acima_de**.")
+                "You should choose only one of the options: ** durationLowers ** or ** durationAbove**.")
 
         try:
             bot = inter.music_bot
@@ -4057,7 +4057,7 @@ class Music(commands.Cog):
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if not player.queue and not player.queue_autoplay:
-            raise GenericError("**Não há musicas na fila.**")
+            raise GenericError("**There are no music in line.**")
 
         filters = []
         final_filters = set()
@@ -4090,7 +4090,7 @@ class Music(commands.Cog):
             filters.append('duplicates')
 
         if not filters and not range_start and not range_end:
-            raise GenericError("**Você deve usar pelo menos uma opção pra mover**")
+            raise GenericError("**You should use at least one option to move**")
 
         indexes = None
 
@@ -4104,18 +4104,18 @@ class Music(commands.Cog):
         if range_start > 0 and range_end > 0:
 
             if range_start >= range_end:
-                raise GenericError("**A posição final deve ser maior que a posição inicial!**")
+                raise GenericError("**The final position must be greater than the starting position!**")
 
             song_list = list(player.queue)[range_start - 1: -(range_end - 1)]
-            txt.append(f"**Posição inicial da fila:** `{range_start}`\n"
-                       f"**Posição final da fila:** `{range_end}`")
+            txt.append(f"**Home Position:** `{range_start}`\n"
+                       f"**Final line position:** `{range_end}`")
 
         elif range_start > 0:
             song_list = list(player.queue)[range_start - 1:]
-            txt.append(f"**Posição inicial da fila:** `{range_start}`")
+            txt.append(f"**Initial row position:** `{range_start}`")
         elif range_end > 0:
             song_list = list(player.queue)[:-(range_end - 1)]
-            txt.append(f"**Posição final da fila:** `{range_end}`")
+            txt.append(f"**Final line position:** `{range_end}`")
         elif song_name and has_id and filters == ["song_name"] and amount is None:
             indexes = queue_track_index(inter, bot, song_name, match_count=1, case_sensitive=case_sensitive)
             for index, track in reversed(indexes):
@@ -4214,26 +4214,26 @@ class Music(commands.Cog):
             duplicated_titles.clear()
 
         if not tracklist:
-            raise GenericError("Nenhuma música encontrada com os filtros selecionados!")
+            raise GenericError("No music found with selected filters!")
 
         for t in reversed(tracklist):
             insert_func(position-1, t)
 
         try:
             final_filters.remove("song_name")
-            txt.append(f"**Inclui nome:** `{fix_characters(song_name)}`")
+            txt.append(f"**Includes Name:** `{fix_characters(song_name)}`")
         except:
             pass
 
         try:
             final_filters.remove("song_author")
-            txt.append(f"**Inclui nome no uploader/artista:** `{fix_characters(song_author)}`")
+            txt.append(f"**Includes name in the uploader/artist:** `{fix_characters(song_author)}`")
         except:
             pass
 
         try:
             final_filters.remove("user")
-            txt.append(f"**Pedido pelo membro:** {user.mention}")
+            txt.append(f"**Requested by the member:** {user.mention}")
         except:
             pass
 
@@ -4245,37 +4245,37 @@ class Music(commands.Cog):
 
         try:
             final_filters.remove("time_below")
-            txt.append(f"**Com duração inicial/igual:** `{time_format(min_duration)}`")
+            txt.append(f"**With initial duration/equal:** `{time_format(min_duration)}`")
         except:
             pass
 
         try:
             final_filters.remove("time_above")
-            txt.append(f"**Com duração máxima:** `{time_format(max_duration)}`")
+            txt.append(f"**Maximum:** `{time_format(max_duration)}`")
         except:
             pass
 
         try:
             final_filters.remove("duplicates")
-            txt.append(f"**Músicas duplicadas**")
+            txt.append(f"**Duplicate songs**")
         except:
             pass
 
         try:
             final_filters.remove("absent_members")
-            txt.append("`Músicas pedidas por membros que saíram do canal.`")
+            txt.append("`Songs requested by members who left the channel.`")
         except:
             pass
 
         components = [
-                disnake.ui.Button(emoji="▶️", label="Tocar agora", custom_id=PlayerControls.embed_forceplay),
+                disnake.ui.Button(emoji="▶️", label="Tap now", custom_id=PlayerControls.embed_forceplay),
             ]
 
         if indexes:
             track = tracklist[0]
             txt = [
-                f"moveu a música [`{fix_characters(track.title, limit=25)}`](<{track.uri or track.search_uri}>) para a posição **[{position}]** da fila.",
-                f"↪️ **⠂{inter.author.mention} moveu uma música para a posição [{position}]:**\n"
+                f"moveuAMusic [`{fix_characters(track.title, limit=25)}`](<{track.uri or track.search_uri}>) to the position **[{position}]** in line.",
+                f"↪️ **⠂{inter.author.mention} moved a music for the position [{position}]:**\n"
                 f"╰[`{fix_characters(track.title, limit=43)}`](<{track.uri or track.search_uri}>)"
             ]
 
@@ -4287,14 +4287,14 @@ class Music(commands.Cog):
 
             moved_tracks_txt = moved_tracks if moved_tracks == 1 else f"[{position}-{position+moved_tracks-1}]"
 
-            msg_txt = f"### ↪️ ⠂{inter.author.mention} moveu {moved_tracks} música{'s'[:moved_tracks^1]} para a posição {moved_tracks_txt} da fila:\n" + "\n".join(f"`{position+n}.` [`{fix_characters(t.title, 45)}`](<{t.uri}>)" for n, t in enumerate(tracklist[:7]))
+            msg_txt = f"### ↪️ ⠂{inter.author.mention} moveu {moved_tracks} music{'s'[:moved_tracks^1]} to the position {moved_tracks_txt} in line:\n" + "\n".join(f"`{position+n}.` [`{fix_characters(t.title, 45)}`](<{t.uri}>)" for n, t in enumerate(tracklist[:7]))
 
             if (track_extra:=(moved_tracks - 7)) > 0:
-                msg_txt += f"\n`e mais {track_extra} música{'s'[:track_extra^1]}.`"
+                msg_txt += f"\n`and more {track_extra} music{'s'[:track_extra^1]}.`"
 
-            msg_txt += f"\n### ✅ ⠂Filtro{(t:='s'[:len(txt)^1])} usado{t}:\n" + '\n'.join(txt)
+            msg_txt += f"\n### ✅ ⠂filtro{(t:='s'[:len(txt)^1])} used{t}:\n" + '\n'.join(txt)
 
-            txt = [f"moveu {moved_tracks} música{'s'[:moved_tracks^1]} para a posição **[{position}]** da fila.", msg_txt]
+            txt = [f"moveu {moved_tracks} music{'s'[:moved_tracks^1]} to the position **[{position}]** in line.", msg_txt]
 
             await self.interaction_message(inter, txt, emoji="↪️", force=True, thumb=tracklist[0].thumb, components=components)
 
@@ -4417,7 +4417,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="restrictmode", aliases=["rstc", "restrict", "restrito", "modorestrito"], only_voiced=True, cooldown=restrict_cd, max_concurrency=restrict_mc,
-                  description="Ativar/Desativar o modo restrito de comandos que requer DJ/Staff.")
+                  description="Activate/disable the restricted mode of commands that requires DJ/staff.")
     async def restrict_mode_legacy(self, ctx: CustomContext):
 
         await self.restrict_mode.callback(self=self, inter=ctx)
@@ -4426,7 +4426,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @commands.slash_command(
-        description=f"{desc_prefix}Ativar/Desativar o modo restrito de comandos que requer DJ/Staff.",
+        description=f"{desc_prefix}Activate/disable the restricted mode of commands that requires DJ/staff.",
         extras={"only_voiced": True}, cooldown=restrict_cd, max_concurrency=restrict_mc, dm_permission=False)
     async def restrict_mode(self, inter: disnake.AppCmdInter):
 
@@ -4439,11 +4439,11 @@ class Music(commands.Cog):
 
         player.restrict_mode = not player.restrict_mode
 
-        msg = ["ativou", "🔐"] if player.restrict_mode else ["desativou", "🔓"]
+        msg = ["activate", "🔐"] if player.restrict_mode else ["disabled", "🔓"]
 
         text = [
-            f"{msg[0]} o modo restrito de comandos do player (que requer DJ/Staff).",
-            f"{msg[1]} **⠂{inter.author.mention} {msg[0]} o modo restrito de comandos do player (que requer DJ/Staff).**"
+            f"{msg[0]} the restricted mode of player commands (which requires DJ/staff).",
+            f"{msg[1]} **⠂{inter.author.mention} {msg[0]} the restricted mode of player commands (which requires DJ/staff).**"
         ]
 
         await self.interaction_message(inter, text, emoji=msg[1])
@@ -4455,7 +4455,7 @@ class Music(commands.Cog):
     @check_voice()
     @commands.has_guild_permissions(manage_guild=True)
     @pool_command(name="247", aliases=["nonstop"], only_voiced=True, cooldown=nonstop_cd, max_concurrency=nonstop_mc,
-                  description="Ativar/Desativar o modo 24/7 do player (Em testes).")
+                  description="Activate/Disable Player's 24/7 mode (in tests).")
     async def nonstop_legacy(self, ctx: CustomContext):
         await self.nonstop.callback(self=self, inter=ctx)
 
@@ -4463,7 +4463,7 @@ class Music(commands.Cog):
     @check_voice()
     @commands.slash_command(
         name="247",
-        description=f"{desc_prefix}Ativar/Desativar o modo 24/7 do player (Em testes).",
+        description=f"{desc_prefix}Activate/Disable Player's 24/7 mode (in tests).",
         default_member_permissions=disnake.Permissions(manage_guild=True), dm_permission=False,
         extras={"only_voiced": True}, cooldown=nonstop_cd, max_concurrency=nonstop_mc
     )
@@ -4481,8 +4481,8 @@ class Music(commands.Cog):
         msg = ["ativou", "♾️"] if player.keep_connected else ["desativou", "❌"]
 
         text = [
-            f"{msg[0]} o modo 24/7 (interrupto) do player.",
-            f"{msg[1]} **⠂{inter.author.mention} {msg[0]} o modo 24/7 (interrupto) do player.**"
+            f"{msg[0]} The 24/7 (Setting) Player mode.",
+            f"{msg[1]} **⠂{inter.author.mention} {msg[0]} The 24/7 (Setting) mode of the player.**"
         ]
 
         if not len(player.queue):
@@ -4505,7 +4505,7 @@ class Music(commands.Cog):
     @has_player()
     @check_voice()
     @pool_command(name="autoplay", aliases=["ap", "aplay"], only_voiced=True, cooldown=autoplay_cd, max_concurrency=autoplay_mc,
-                  description="Ativar/Desativar a reprodução automática ao acabar as músicas da fila.")
+                  description="Activate/Disable automatic playback by finishing line songs.")
     async def autoplay_legacy(self, ctx: CustomContext):
         await self.autoplay.callback(self=self, inter=ctx)
 
@@ -4513,7 +4513,7 @@ class Music(commands.Cog):
     @check_voice()
     @commands.slash_command(
         name="autoplay",
-        description=f"{desc_prefix}Ativar/Desativar a reprodução automática ao acabar as músicas da fila.",
+        description=f"{desc_prefix}Activate/Disable automatic playback by finishing line songs.",
         extras={"only_voiced": True}, cooldown=autoplay_cd, max_concurrency=autoplay_mc, dm_permission=False
     )
     async def autoplay(self, inter: disnake.AppCmdInter):
@@ -4527,10 +4527,10 @@ class Music(commands.Cog):
 
         player.autoplay = not player.autoplay
 
-        msg = ["ativou", "🔄"] if player.autoplay else ["desativou", "❌"]
+        msg = ["activate", "🔄"] if player.autoplay else ["disabled", "❌"]
 
-        text = [f"{msg[0]} a reprodução automática.",
-                f"{msg[1]} **⠂{inter.author.mention} {msg[0]} a reprodução automática.**"]
+        text = [f"{msg[0]} Automatic Reproduction.",
+                f"{msg[1]} **⠂{inter.author.mention} {msg[0]} Automatic Reproduction.**"]
 
         if player.current:
             await self.interaction_message(inter, txt=text, emoji=msg[1])
@@ -4545,12 +4545,12 @@ class Music(commands.Cog):
     @is_dj()
     @commands.cooldown(1, 10, commands.BucketType.guild)
     @commands.slash_command(
-        description=f"{desc_prefix}Migrar o player para outro servidor de música.", dm_permission=False
+        description=f"{desc_prefix}Migrate the player to another music server.", dm_permission=False
     )
     async def change_node(
             self,
             inter: disnake.AppCmdInter,
-            node: str = commands.Param(name="servidor", description="Servidor de música")
+            node: str = commands.Param(name="server", description="Music server")
     ):
 
         try:
@@ -4559,12 +4559,12 @@ class Music(commands.Cog):
             bot = inter.bot
 
         if node not in bot.music.nodes:
-            raise GenericError(f"O servidor de música **{node}** não foi encontrado.")
+            raise GenericError(f"The Music Server **{node}** It was not found.")
 
         player: LavalinkPlayer = bot.music.players[inter.guild_id]
 
         if node == player.node.identifier:
-            raise GenericError(f"O player já está no servidor de música **{node}**.")
+            raise GenericError(f"The player is already on the music server **{node}**.")
 
         await inter.response.defer(ephemeral=True)
 
@@ -4572,17 +4572,17 @@ class Music(commands.Cog):
 
         player.native_yt = True
 
-        embed = disnake.Embed(description=f"**O player foi migrado para o servidor de música:** `{node}`",
+        embed = disnake.Embed(description=f"**The player was migrated to the music server:** `{node}`",
                               color=self.bot.get_color(player.guild.me))
 
         try:
             if bot.user.id != self.bot.user.id:
-                embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
         except AttributeError:
             pass
 
         player.set_command_log(
-            text=f"{inter.author.mention} migrou o player para o servidor de música **{node}**",
+            text=f"{inter.author.mention}Migrated the player to the music server **{node}**",
             emoji="🌎"
         )
 
@@ -4618,7 +4618,7 @@ class Music(commands.Cog):
         return [n.identifier for n in bot.music.nodes.values() if n != node
                 and query.lower() in n.identifier.lower() and n.available and n.is_available]
 
-    @commands.command(aliases=["puptime"], description="Ver informações de tempo que o player está ativo no servidor.")
+    @commands.command(aliases=["puptime"], description="See time information that the player is active on the server.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def playeruptime(self, ctx: CustomContext):
 
@@ -4633,7 +4633,7 @@ class Music(commands.Cog):
                 continue
 
         if not uptime_info:
-            raise GenericError("**Não há players ativos no servidor.**")
+            raise GenericError("**There are no active players on the server.**")
 
         await ctx.reply(
             embed=disnake.Embed(
@@ -4649,13 +4649,13 @@ class Music(commands.Cog):
     @commands.command(name="favmanager", aliases=["favs", "favoritos", "fvmgr", "favlist",
                                                   "integrations", "integrationmanager", "itg", "itgmgr", "itglist", "integrationlist",
                                                   "serverplaylist", "spl", "svp", "svpl"],
-                      description="Gerenciar seus favoritos/integrações e links do server.", cooldown=fav_cd)
+                      description="Manage your favorite/integrations and server links.", cooldown=fav_cd)
     async def fav_manager_legacy(self, ctx: CustomContext):
         await self.fav_manager.callback(self=self, inter=ctx)
 
     @commands.max_concurrency(1, commands.BucketType.member, wait=False)
     @commands.slash_command(
-        description=f"{desc_prefix}Gerenciar seus favoritos/integrações e links do server.",
+        description=f"{desc_prefix}Manage your favorite/integrations and server links.",
         cooldown=fav_cd, dm_permission=False, extras={"allow_private": True})
     async def fav_manager(self, inter: disnake.AppCmdInter):
 
@@ -4708,8 +4708,8 @@ class Music(commands.Cog):
         txt = view.build_txt()
 
         if not txt:
-            raise GenericError("**Não há suporte a esse recurso no momento...**\n\n"
-                             "`Suporte ao spotify e YTDL não estão ativados.`")
+            raise GenericError("**There is no support to this feature at the moment...**\n\n"
+                             "`SPotify and YTDL support are not activated.`")
 
         view.message = await inter.send(txt, view=view, ephemeral=ephemeral)
 
@@ -4737,7 +4737,7 @@ class Music(commands.Cog):
             return
 
         player.message = None
-        await thread.edit(archived=True, locked=True, name=f"arquivado: {thread.name}")
+        await thread.edit(archived=True, locked=True, name=f"filed: {thread.name}")
 
     @commands.Cog.listener('on_ready')
     async def resume_players_ready(self):
@@ -4765,7 +4765,7 @@ class Music(commands.Cog):
 
                 if not vc:
                     print(
-                        f"{self.bot.user} - {player.guild.name} [{guild_id}] - Player finalizado por falta de canal de voz")
+                        f"{self.bot.user} - {player.guild.name} [{guild_id}] - Player finished due to lack of voice channel")
                     try:
                         await player.destroy()
                     except:
@@ -4776,7 +4776,7 @@ class Music(commands.Cog):
 
                 if not player.is_paused and not player.is_playing:
                     await player.process_next()
-                print(f"{self.bot.user} - {player.guild.name} [{guild_id}] - Player Reconectado no canal de voz")
+                print(f"{self.bot.user} - {player.guild.name} [{guild_id}] - Player reconnected no voice channel")
             except:
                 traceback.print_exc()
 
@@ -4846,7 +4846,7 @@ class Music(commands.Cog):
             channel_db = None
         except disnake.Forbidden:
             channel_db = bot.get_channel(inter.channel_id)
-            warn_message = f"Não tenho permissão de acessar o canal <#{static_player['channel']}>, o player será usado no modo tradicional."
+            warn_message = f"I am not allowed to access the channel <#{static_player['channel']}>, The player will be used in traditional mode."
             static_player["channel"] = None
 
         if not channel_db or channel_db.guild.id != inter.guild_id:
@@ -4900,7 +4900,7 @@ class Music(commands.Cog):
                                     if not thread:
                                         thread_wmessage = await channel_db.parent.create_thread(
                                             name=f"{bot.user} song-request",
-                                            content="Post para pedido de músicas.",
+                                            content="Post for song request.",
                                             auto_archive_duration=10080,
                                             slowmode_delay=5,
                                         )
@@ -4921,8 +4921,8 @@ class Music(commands.Cog):
                                 await channel_db.edit(**thread_kw)
 
                             elif isinstance(channel.parent, disnake.ForumChannel):
-                                warn_message = f"**{bot.user.mention} não possui permissão de gerenciar tópicos " \
-                                                f"para desarquivar/destrancar o tópico: {channel_db.mention}**"
+                                warn_message = f"**{bot.user.mention} No permission to manage topics " \
+                                                f"To uncover/unlock the topic: {channel_db.mention}**"
 
                 except AttributeError:
                     pass
@@ -4940,16 +4940,16 @@ class Music(commands.Cog):
 
                     if not send_message_perm:
                         raise GenericError(
-                            f"**{bot.user.mention} não possui permissão para enviar mensagens no canal <#{static_player['channel']}>**\n"
-                            "Caso queira resetar a configuração do canal de pedir música, use o comando /reset ou /setup "
-                            "novamente..."
+                            f"**{bot.user.mention} does not have permission to send messages on the channel <#{static_player['channel']}>**\n"
+                            "If you want to reset the setting of the requested music channel, use the /reset or /setup"
+                            "again..."
                         )
 
                     if not channel_db_perms.embed_links:
                         raise GenericError(
-                            f"**{bot.user.mention} não possui permissão para anexar links/embeds no canal <#{static_player['channel']}>**\n"
-                            "Caso queira resetar a configuração do canal de pedir música, use o comando /reset ou /setup "
-                            "novamente..."
+                            f"**{bot.user.mention}does not have permission to attach links/embeds on the channel<#{static_player['channel']}>**\n"
+                            "If you want to reset the setting of the requested music channel, use the /reset or /setup "
+                            "again..."
                         )
 
         return channel_db, warn_message, message
@@ -4962,7 +4962,7 @@ class Music(commands.Cog):
     ):
 
         if not command:
-            raise GenericError("comando não encontrado/implementado.")
+            raise GenericError("command not found/implemented.")
 
         try:
             interaction.application_command = command
@@ -4991,7 +4991,7 @@ class Music(commands.Cog):
     async def guild_pin(self, interaction: disnake.MessageInteraction):
 
         if not self.bot.bot_ready:
-            await interaction.send("Ainda estou inicializando...\nPor favor aguarde mais um pouco...", ephemeral=True)
+            await interaction.send("I'm still booting ... \ please wait a little longer...", ephemeral=True)
             return
 
         if interaction.data.custom_id != "player_guild_pin":
@@ -5002,7 +5002,7 @@ class Music(commands.Cog):
             return
 
         if not interaction.user.voice:
-            await interaction.send("Você deve entrar em um canal de voz para usar isto.", ephemeral=True)
+            await interaction.send("You must enter a voice channel to use this.", ephemeral=True)
             return
 
         await interaction.response.defer(ephemeral=True)
@@ -5012,7 +5012,7 @@ class Music(commands.Cog):
         try:
             query = interaction.data.values[0]
         except KeyError:
-            await interaction.send("**O item selecionado não foi encontrado na base de dados...**", ephemeral=True)
+            await interaction.send("**The selected item was not found in the database ...**", ephemeral=True)
             await send_idle_embed(interaction.message, bot=self.bot, guild_data=guild_data, force=True)
             return
 
@@ -5063,14 +5063,14 @@ class Music(commands.Cog):
 
         if player.stage_title_event and (time_:=int((disnake.utils.utcnow() - player.start_time).total_seconds())) < time_limit and not (await bot.is_owner(inter.author)):
             raise GenericError(
-                f"**Você terá que aguardar {time_format((time_limit - time_) * 1000, use_names=True)} para usar essa função "
-                f"com o anúncio automático do palco ativo...**"
+                f"**You'll have to wait {time_format((time_limit - time_) * 1000, use_names=True)} To use this function "
+                f"with the automatic ad active stage...**"
             )
 
     async def player_controller(self, interaction: disnake.MessageInteraction, control: str, **kwargs):
 
         if not self.bot.bot_ready or not self.bot.is_ready():
-            await interaction.send("Ainda estou inicializando...", ephemeral=True)
+            await interaction.send("I'm still booting...", ephemeral=True)
             return
 
         if not interaction.guild_id:
@@ -5099,7 +5099,7 @@ class Music(commands.Cog):
                 try:
                     await self.player_interaction_concurrency.acquire(interaction)
                 except:
-                    raise GenericError("Há uma música sendo processada no momento...")
+                    raise GenericError("There is a music being processed at the moment...")
 
                 bot: Optional[BotCore] = None
                 player: Optional[LavalinkPlayer] = None
@@ -5121,8 +5121,8 @@ class Music(commands.Cog):
 
                         if p.locked:
                             raise GenericError(
-                                "**Não é possível executar essa ação com o processamento da música em andamento "
-                                "(por favor aguarde mais alguns segundos e tente novamente).**")
+                                "**It is not possible to perform this action with the processing of music in progress "
+                                "(Please wait a few more seconds and try again).**")
 
                         player = p
                         bot = b
@@ -5131,10 +5131,10 @@ class Music(commands.Cog):
                         break
 
                 if not channel:
-                    raise GenericError("Não há bots disponíveis no momento.")
+                    raise GenericError("There are no bots available at the moment.")
 
                 if not author.voice:
-                    raise GenericError("Você deve entrar em um canal de voz pra usar esse botão....")
+                    raise GenericError("You must enter a voice channel to use this button....")
 
                 try:
                     node = player.node
@@ -5158,7 +5158,7 @@ class Music(commands.Cog):
 
                     if (retry_after := self.bot.pool.enqueue_playlist_embed_cooldown.get_bucket(interaction).update_rate_limit()):
                         raise GenericError(
-                            f"**Você terá que aguardar {(rta:=int(retry_after))} segundo{'s'[:rta^1]} pra adicionar uma playlist no player atual.**")
+                            f"**You'll have to wait {(rta:=int(retry_after))} second{'s'[:rta^1]} To add a playlist to the current player.**")
 
                     if not player:
                         player = await self.create_player(inter=interaction, bot=bot, guild=channel.guild,
@@ -5168,7 +5168,7 @@ class Music(commands.Cog):
                     result, node = await self.get_tracks(url, interaction, author, source=False, node=player.node, bot=bot)
                     result = await self.check_player_queue(interaction.author, bot, interaction.guild_id, tracks=result)
                     player.queue.extend(result.tracks)
-                    await interaction.send(f"{interaction.author.mention}, a playlist [`{result.name}`](<{url}>) foi adicionada com sucesso!{player.controller_link}", ephemeral=True)
+                    await interaction.send(f"{interaction.author.mention}, a playlist [`{result.name}`](<{url}>) It was successfully added!{player.controller_link}", ephemeral=True)
                     if not player.is_connected:
                         await player.connect(vc_id)
                     if not player.current:
@@ -5184,7 +5184,7 @@ class Music(commands.Cog):
                         if control == PlayerControls.embed_forceplay and player.current and (player.current.uri.startswith(url) or url.startswith(player.current.uri)):
                             await self.check_stage_title(inter=interaction, bot=bot, player=player)
                             await player.seek(0)
-                            player.set_command_log("voltou para o início da música.", emoji="⏪")
+                            player.set_command_log("returned to the beginning of music.", emoji="⏪")
                             await asyncio.sleep(3)
                             await player.update_stage_topic()
                             await asyncio.sleep(7)
@@ -5219,7 +5219,7 @@ class Music(commands.Cog):
 
                             if (retry_after := self.bot.pool.enqueue_track_embed_cooldown.get_bucket(interaction).update_rate_limit()):
                                 raise GenericError(
-                                    f"**Você terá que aguardar {(rta:=int(retry_after))} segundo{'s'[:rta^1]} para adicionar uma nova música na fila.**")
+                                    f"**You'll have to wait {(rta:=int(retry_after))} second{'s'[:rta^1]}To add a new music in line.**")
 
                             if control == PlayerControls.embed_enqueue_track:
                                 await self.check_player_queue(interaction.author, bot, interaction.guild_id)
@@ -5239,7 +5239,7 @@ class Music(commands.Cog):
                             await self.check_player_queue(interaction.author, bot, interaction.guild_id)
                             player.queue.append(track)
                             player.update = True
-                            await interaction.send(f"{author.mention}, a música [`{track.title}`](<{track.uri}>) foi adicionada na fila.{player.controller_link}", ephemeral=True)
+                            await interaction.send(f"{author.mention}, a music [`{track.title}`](<{track.uri}>) It was added in line.{player.controller_link}", ephemeral=True)
                             if not player.is_connected:
                                 await player.connect(vc_id)
                             if not player.current:
@@ -5271,12 +5271,12 @@ class Music(commands.Cog):
             try:
                 embed = interaction.message.embeds[0]
             except IndexError:
-                await interaction.send("A embed da mensagem foi removida...", ephemeral=True)
+                await interaction.send("The message embed was removed...", ephemeral=True)
                 return
 
             if (retry_after := self.bot.pool.add_fav_embed_cooldown.get_bucket(interaction).update_rate_limit()):
                 await interaction.send(
-                    f"**Você terá que aguardar {(rta:=int(retry_after))} segundo{'s'[:rta^1]} para adicionar um novo favorito.**",
+                    f"**You'll have to wait {(rta:=int(retry_after))} second{'s'[:rta^1]} To add a new favorite.**",
                     ephemeral=True)
                 return
 
@@ -5287,16 +5287,16 @@ class Music(commands.Cog):
             if self.bot.config["MAX_USER_FAVS"] > 0 and not (await self.bot.is_owner(interaction.author)):
 
                 if (current_favs_size := len(user_data["fav_links"])) > self.bot.config["MAX_USER_FAVS"]:
-                    await interaction.edit_original_message(f"A quantidade de itens no seu arquivo de favorito excede "
-                                                            f"a quantidade máxima permitida ({self.bot.config['MAX_USER_FAVS']}).")
+                    await interaction.edit_original_message(f"The amount of items in your favorite file exceeds "
+                                                            f"The maximum allowed quantity ({self.bot.config['MAX_USER_FAVS']}).")
                     return
 
                 if (current_favs_size + (user_favs := len(user_data["fav_links"]))) > self.bot.config["MAX_USER_FAVS"]:
                     await interaction.edit_original_message(
-                        "Você não possui espaço suficiente para adicionar todos os favoritos de seu arquivo...\n"
-                        f"Limite atual: {self.bot.config['MAX_USER_FAVS']}\n"
-                        f"Quantidade de favoritos salvos: {user_favs}\n"
-                        f"Você precisa de: {(current_favs_size + user_favs) - self.bot.config['MAX_USER_FAVS']}")
+                        "You do not have enough space to add all favorites from your file...\n"
+                        f"Current limit: {self.bot.config['MAX_USER_FAVS']}\n"
+                        f"Amount of saved favorites: {user_favs}\n"
+                        f"You need: {(current_favs_size + user_favs) - self.bot.config['MAX_USER_FAVS']}")
                     return
 
             fav_name = embed.author.name[1:]
@@ -5318,18 +5318,18 @@ class Music(commands.Cog):
                                                                 interaction.message.embeds[0].fields[0].value.replace(
                                                                     interaction.author.mention, "")
             except IndexError:
-                interaction.message.embeds[0].add_field(name="**Membros que favoritaram o link:**",
+                interaction.message.embeds[0].add_field(name="**Membros que favoriteam o link:**",
                                                         value=interaction.author.mention)
 
             await interaction.send(embed=disnake.Embed(
-                description=f"[`{fav_name}`](<{embed.author.url}>) **foi adicionado nos seus favoritos!**\n\n"
-                            "**Como usar?**\n"
-                            f"* Usando o comando {cmd} (selecionando o favorito no preenchimento automático da busca)\n"
-                            "* Clicando no botão/select de tocar favorito/integração do player.\n"
-                            f"* Usando o comando {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name} sem incluir um nome ou link de uma música/vídeo.\n"
+                description=f"[`{fav_name}`](<{embed.author.url}>) **It has been added to your favorites!**\n\n"
+                            "**How to use?**\n"
+                            f"* Using the command {cmd}(Selecting the favorite in the automatic filling of Search)\n"
+                            "*Clicking the Player's favorite TAP button/select.\n"
+                            f"* Using the command {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name}without including a name or link of a music/video.\n"
 
 
-            ).set_footer(text=f"Caso queira ver todos os seus favoritos use o comando {global_data['prefix'] or self.bot.default_prefix}{self.fav_manager_legacy.name}"), ephemeral=True)
+            ).set_footer(text=f"If you want to see all your favorites use the command{global_data['prefix'] or self.bot.default_prefix}{self.fav_manager_legacy.name}"), ephemeral=True)
 
             if not interaction.message.flags.ephemeral:
                 if not interaction.guild:
@@ -5353,7 +5353,7 @@ class Music(commands.Cog):
             if control == PlayerControls.fav_manager:
 
                 if str(interaction.user.id) not in interaction.message.content:
-                    await interaction.send("Você não pode interagir aqui!", ephemeral=True)
+                    await interaction.send("You can't interact here!", ephemeral=True)
                     return
 
                 cmd = self.bot.get_slash_command("fav_manager")
@@ -5363,24 +5363,24 @@ class Music(commands.Cog):
             if control == PlayerControls.add_song:
 
                 if not interaction.user.voice:
-                    raise GenericError("**Você deve entrar em um canal de voz para usar esse botão.**")
+                    raise GenericError("**You must enter a voice channel to use this button.**")
 
                 await interaction.response.send_modal(
-                    title="Pedir uma música",
+                    title="Ask for a music",
                     custom_id=f"modal_add_song" + (f"_{interaction.message.id}" if interaction.message.thread else ""),
                     components=[
                         disnake.ui.TextInput(
                             style=disnake.TextInputStyle.short,
-                            label="Nome/link da música.",
-                            placeholder="Nome ou link do youtube/spotify/soundcloud etc.",
+                            label="Nome/link da music.",
+                            placeholder="nomeOuLinkDoYoutube/spotify/soundcloudEtc.",
                             custom_id="song_input",
                             max_length=150,
                             required=True
                         ),
                         disnake.ui.TextInput(
                             style=disnake.TextInputStyle.short,
-                            label="Posição da fila (número).",
-                            placeholder="Opcional, caso não seja usado será adicionada no final.",
+                            label="LINE POSITION (Number).",
+                            placeholder="Optional, if not used will be added at the end.",
                             custom_id="song_position",
                             max_length=3,
                             required=False
@@ -5402,8 +5402,8 @@ class Music(commands.Cog):
                         cmd = "/lastfm"
 
                     await interaction.edit_original_message(
-                        content=f"Você não possui uma conta do last.fm vinculada nos meus dados. "
-                                f"Você pode vincular uma conta do last.fm usando o comando {cmd}."
+                        content=f"You do not have a Last.fm account linked to my data. "
+                                f"You can link a Last.fm account using the command {cmd}."
                     )
                     return
 
@@ -5412,7 +5412,7 @@ class Music(commands.Cog):
                 await self.bot.update_global_data(interaction.author.id, user_data, db_name=DBModel.users)
                 await interaction.edit_original_message(
                     embed=disnake.Embed(
-                        description=f'**O scrobble/registro de músicas foi {"ativado" if user_data["lastfm"]["scrobble"] else "desativado"} na conta: [{user_data["lastfm"]["username"]}](<https://www.last.fm/user/{user_data["lastfm"]["username"]}>).**',
+                        description=f'**SCROBBLE/SONGS REGISTRATION WAS {"ativado" if user_data["lastfm"]["scrobble"] else "desativado"} In the account: [{user_data["lastfm"]["username"]}](<https://www.last.fm/user/{user_data["lastfm"]["username"]}>).**',
                         color=self.bot.get_color()
                     )
                 )
@@ -5421,7 +5421,7 @@ class Music(commands.Cog):
             if control == PlayerControls.enqueue_fav:
 
                 if not interaction.user.voice:
-                    raise GenericError("**Você deve entrar em um canal de voz para usar esse botão.**")
+                    raise GenericError("**You must enter a voice channel to use this button.**")
 
                 cmd_kwargs = {
                     "query": kwargs.get("query", ""),
@@ -5440,7 +5440,7 @@ class Music(commands.Cog):
                 try:
                     player: LavalinkPlayer = self.bot.music.players[interaction.guild_id]
                 except KeyError:
-                    await interaction.send("Não há player ativo no servidor...", ephemeral=True)
+                    await interaction.send("There is no active player on the server...", ephemeral=True)
                     await send_idle_embed(interaction.message, bot=self.bot)
                     return
 
@@ -5449,7 +5449,7 @@ class Music(commands.Cog):
                         return
 
                 if player.interaction_cooldown:
-                    raise GenericError("O player está em cooldown, tente novamente em instantes.")
+                    raise GenericError("The player is in Cooldown, try again in moments.")
 
                 try:
                     vc = player.guild.me.voice.channel
@@ -5459,16 +5459,16 @@ class Music(commands.Cog):
 
                 if control == PlayerControls.help_button:
                     embed = disnake.Embed(
-                        description="📘 **IFORMAÇÕES SOBRE OS BOTÕES** 📘\n\n"
-                                    "⏯️ `= Pausar/Retomar a música.`\n"
-                                    "⏮️ `= Voltar para a música tocada anteriormente.`\n"
-                                    "⏭️ `= Pular para a próxima música.`\n"
-                                    "🔀 `= Misturar as músicas da fila.`\n"
-                                    "🎶 `= Adicionar música/playlist/favorito.`\n"
-                                    "⏹️ `= Parar o player e me desconectar do canal.`\n"
-                                    "📑 `= Exibir a fila de música.`\n"
-                                    "🛠️ `= Alterar algumas configurações do player:`\n"
-                                    "`volume / efeito nightcore / repetição / modo restrito.`\n",
+                        description="📘 **Buttons information** 📘\n\n"
+                                    "⏯️ `= pauses/retomarAMusic.`\n"
+                                    "⏮️ `= Back to the previously played music.`\n"
+                                    "⏭️ `= Jump to the next music.`\n"
+                                    "🔀 `= Mix the Songs in the queue.`\n"
+                                    "🎶 `= Add music/playlist/favorite.`\n"
+                                    "⏹️ `= Stop the player and disconnect me from the channel.`\n"
+                                    "📑 `= Display the music line.`\n"
+                                    "🛠️ `=Change some player settings:`\n"
+                                    "`Nightcore Volume / Effect / Repetition / Restricted Mode.`\n",
                         color=self.bot.get_color(interaction.guild.me)
                     )
 
@@ -5476,14 +5476,14 @@ class Music(commands.Cog):
                     return
 
                 if not interaction.author.voice or interaction.author.voice.channel != vc:
-                    raise GenericError(f"Você deve estar no canal <#{vc.id}> para usar os botões do player.")
+                    raise GenericError(f"You must be on the channel <#{vc.id}> To use the Player buttons.")
 
                 if control == PlayerControls.miniqueue:
                     await is_dj().predicate(interaction)
                     player.mini_queue_enabled = not player.mini_queue_enabled
                     player.set_command_log(
                         emoji="📑",
-                        text=f"{interaction.author.mention} {'ativou' if player.mini_queue_enabled else 'desativou'} "
+                        text=f"{interaction.author.mention} {'activate' if player.mini_queue_enabled else 'disabled'} "
                              f"a mini-fila do player."
                     )
                     await player.invoke_np(interaction=interaction)
@@ -5494,12 +5494,12 @@ class Music(commands.Cog):
                         await self.player_interaction_concurrency.acquire(interaction)
                     except commands.MaxConcurrencyReached:
                         raise GenericError(
-                            "**Você tem uma interação em aberto!**\n`Se for uma mensagem oculta, evite clicar em \"ignorar\".`")
+                            "**You have an open interaction!**\n`If it's a hidden message, avoid clicking on \"ignorar\".`")
 
                 if control == PlayerControls.add_favorite:
 
                     if not player.current:
-                        await interaction.send("**Não há música tocando atualmente...**", ephemeral=True)
+                        await interaction.send("**There is no music currently playing...**", ephemeral=True)
                         return
 
                     choices = {}
@@ -5511,7 +5511,7 @@ class Music(commands.Cog):
                             "url": player.current.uri,
                             "emoji": "🎵"
                         }
-                        msg += f"**Música:** [`{player.current.title}`]({player.current.uri})\n"
+                        msg += f"**Music:** [`{player.current.title}`]({player.current.uri})\n"
 
                     if player.current.album_url:
                         choices["Album"] = {
@@ -5537,7 +5537,7 @@ class Music(commands.Cog):
                         await interaction.send(
                             embed=disnake.Embed(
                                 color=self.bot.get_color(interaction.guild.me),
-                                description="### Não há itens para favoritar na música atual."
+                                description="### There are no items for favorite in the current music."
                             ), ephemeral=True
                         )
                         return
@@ -5554,7 +5554,7 @@ class Music(commands.Cog):
                         await interaction.send(
                             embed=disnake.Embed(
                                 color=self.bot.get_color(interaction.guild.me),
-                                description=f"### Selecione um item da música atual para adicionar nos seus favoritos:"
+                                description=f"### Select a current music item to add to your favorites:"
                                             f"\n\n{msg}"
                             ), view=view, ephemeral=True
                         )
@@ -5571,7 +5571,7 @@ class Music(commands.Cog):
                             await interaction.edit_original_message(
                                 embed=disnake.Embed(
                                     color=self.bot.get_color(interaction.guild.me),
-                                    description="### Operação cancelada!"
+                                    description="### Canceled operation!"
                                 ), view=None
                             )
                             return
@@ -5591,8 +5591,8 @@ class Music(commands.Cog):
                             await interaction.edit_original_message(
                                 embed=disnake.Embed(
                                     color=self.bot.get_color(interaction.guild.me),
-                                    description="Você não possui espaço suficiente para adicionar todos os favoritos de seu arquivo...\n"
-                                                f"Limite atual: {self.bot.config['MAX_USER_FAVS']}"
+                                    description="You do not have enough space to add all favorites from your file...\n"
+                                                f"Current limit: {self.bot.config['MAX_USER_FAVS']}"
                                 ), view=None)
                             return
 
@@ -5612,12 +5612,12 @@ class Music(commands.Cog):
                     await interaction.edit_original_response(
                         embed=disnake.Embed(
                             color=self.bot.get_color(interaction.guild.me),
-                            description="### Item adicionado/editado com sucesso nos seus favoritos:\n\n"
+                            description="### Item added/Edited successfully to your favorites:\n\n"
                                         f"**{select_type}:** [`{info['name']}`]({info['url']})\n\n"
-                                        f"### Como usar?\n"
-                                        f"* Usando o comando {slashcmd} (no preenchimento automático da busca)\n"
-                                        f"* Clicando no botão/select de tocar favorito/integração do player.\n"
-                                        f"* Usando o comando {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name} sem incluir um nome ou link de uma música/vídeo."
+                                        f"### How to use?\n"
+                                        f"* Using the command {slashcmd} (In the automatic filling of Search)\n"
+                                        f"*Clicking the favorite TAP button/select/player integration.\n"
+                                        f"* Using the command {global_data['prefix'] or self.bot.default_prefix}{self.play_legacy.name} sem incluir um nome ou link de uma music/vídeo."
                         ), view=None
                     )
 
@@ -5634,7 +5634,7 @@ class Music(commands.Cog):
                             await self.player_interaction_concurrency.release(interaction)
                         except:
                             pass
-                        await interaction.send("**Não estou tocando algo no momento...**", ephemeral=True)
+                        await interaction.send("**I'm not playing something at the moment...**", ephemeral=True)
                         return
 
                     if not player.current.ytid:
@@ -5642,10 +5642,10 @@ class Music(commands.Cog):
                             await self.player_interaction_concurrency.release(interaction)
                         except:
                             pass
-                        await interaction.send("No momento apenas músicas do youtube são suportadas.", ephemeral=True)
+                        await interaction.send("At the moment just YouTube Songs are supported.", ephemeral=True)
                         return
 
-                    not_found_msg = "Não há letras disponíveis para a música atual..."
+                    not_found_msg = "There are no letters available for current music..."
 
                     await interaction.response.defer(ephemeral=True, with_message=True)
 
@@ -5683,7 +5683,7 @@ class Music(commands.Cog):
 
                     await interaction.edit_original_message(
                         embed=disnake.Embed(
-                            description=f"### Letras da música: [{player.current.title}](<{player.current.uri}>)\n{lyrics_string}",
+                            description=f"### Letras da music: [{player.current.title}](<{player.current.uri}>)\n{lyrics_string}",
                             color=self.bot.get_color(player.guild.me)
                         )
                     )
@@ -5750,11 +5750,11 @@ class Music(commands.Cog):
 
                 if position:
                     if not position.isdigit():
-                        raise GenericError("**A posição da fila tem que ser um número.**")
+                        raise GenericError("**The position of the line has to be a number.**")
                     position = int(position)
 
                     if position < 1:
-                        raise GenericError("**Número da posição da fila tem que ser 1 ou superior.**")
+                        raise GenericError("**Rinning position number has to be 1 or higher.**")
 
                 kwargs = {
                     "query": query,
@@ -5865,8 +5865,8 @@ class Music(commands.Cog):
                 await message.channel.send(
                     message.author.mention,
                     embed=disnake.Embed(
-                        description="Infelizmente não posso conferir o conteúdo de sua mensagem...\n"
-                                    "Tente adicionar música usando **/play** ou clique em um dos botões abaixo:",
+                        description="Unfortunately I cannot check the content of your message...\n"
+                                    "Try to add music using **/play ** or click on one of the buttons below:",
                         color=self.bot.get_color(message.guild.me)
                     ),
                     components=song_request_buttons, delete_after=20
@@ -5910,19 +5910,19 @@ class Music(commands.Cog):
                 try:
                     attachment = message.attachments[0]
                 except IndexError:
-                    await message.channel.send(f"{message.author.mention} você deve enviar um link/nome da música.", delete_after=8)
+                    await message.channel.send(f"{message.author.mention} You must send a music name/name.", delete_after=8)
                     return
 
                 else:
 
                     if attachment.size > 18000000:
-                        await message.channel.send(f"{message.author.mention} o arquivo que você enviou deve ter o tamanho "
-                                                   f"inferior a 18mb.", delete_after=8)
+                        await message.channel.send(f"{message.author.mention}The file you sent must have the size "
+                                                   f"inferiorA18Mb.", delete_after=8)
                         return
 
                     if attachment.content_type not in self.audio_formats:
-                        await message.channel.send(f"{message.author.mention} o arquivo que você enviou deve ter o tamanho "
-                                                   f"inferior a 18mb.", delete_after=8)
+                        await message.channel.send(f"{message.author.mention} The file you sent must have the size "
+                                                   f"inferiorA18Mb.", delete_after=8)
                         return
 
                     message.content = attachment.url
@@ -5932,7 +5932,7 @@ class Music(commands.Cog):
             except:
 
                 await message.channel.send(
-                    f"{message.author.mention} você deve aguardar seu pedido de música anterior carregar...",
+                    f"{message.author.mention} You must wait for your previous music order to load...",
                 )
 
                 await self.delete_message(message)
@@ -5954,15 +5954,15 @@ class Music(commands.Cog):
                     view = SelectInteraction(
                         user=message.author,
                         opts=[
-                            disnake.SelectOption(label="Música", emoji="🎵",
-                                                 description="Carregar apenas a música do link.", value="music"),
+                            disnake.SelectOption(label="Music", emoji="🎵",
+                                                 description="Load only the music of the link.", value="music"),
                             disnake.SelectOption(label="Playlist", emoji="🎶",
-                                                 description="Carregar playlist com a música atual.", value="playlist"),
+                                                 description="Playlist load with the current music.", value="playlist"),
                         ], timeout=30)
 
                     embed = disnake.Embed(
-                        description="**O link contém vídeo com playlist.**\n"
-                                    f'Selecione uma opção em até <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=30)).timestamp())}:R> para prosseguir.',
+                        description="**The link contains video with playlist.**\n"
+                                    f'Select an option by <t:{int((disnake.utils.utcnow() + datetime.timedelta(seconds=30)).timestamp())}:R> para prosseguir.',
                         color=self.bot.get_color(message.guild.me)
                     )
 
@@ -5995,7 +5995,7 @@ class Music(commands.Cog):
             else:
                 if not error_msg:
                     has_exception = e
-                    error = f"{message.author.mention} **ocorreu um erro ao tentar obter resultados para sua busca:** ```py\n{error_msg}```"
+                    error = f"{message.author.mention} **An error occurred when trying to get results for your search:** ```py\n{error_msg}```"
                 else:
                     error = f"{message.author.mention}. {error_msg}"
 
@@ -6031,7 +6031,7 @@ class Music(commands.Cog):
                     full_error_msg = has_exception
 
                 embed = disnake.Embed(
-                    title="Ocorreu um erro em um servidor (song-request):",
+                    title="An error occurred on a serverr (song-request):",
                     timestamp=disnake.utils.utcnow(),
                     description=f"```py\n{repr(has_exception)[:2030].replace(self.bot.http.token, 'mytoken')}```"
                 )
@@ -6042,23 +6042,23 @@ class Music(commands.Cog):
                 )
 
                 embed.add_field(
-                    name="Servidor:", inline=False,
+                    name="Server:", inline=False,
                     value=f"```\n{disnake.utils.escape_markdown(ctx.guild.name)}\nID: {ctx.guild.id}```"
                 )
 
                 embed.add_field(
-                    name="Conteúdo do pedido de música:", inline=False,
+                    name="Music Request Contents:", inline=False,
                     value=f"```\n{message.content}```"
                 )
 
                 embed.add_field(
-                    name="Canal de texto:", inline=False,
+                    name="Text channel:", inline=False,
                     value=f"```\n{disnake.utils.escape_markdown(ctx.channel.name)}\nID: {ctx.channel.id}```"
                 )
 
                 if vc := ctx.author.voice:
                     embed.add_field(
-                        name="Canal de voz (user):", inline=False,
+                        name="Voice channel (user):", inline=False,
                         value=f"```\n{disnake.utils.escape_markdown(vc.channel.name)}" +
                               (f" ({len(vc.channel.voice_states)}/{vc.channel.user_limit})"
                                if vc.channel.user_limit else "") + f"\nID: {vc.channel.id}```"
@@ -6067,7 +6067,7 @@ class Music(commands.Cog):
                 if vcbot := ctx.guild.me.voice:
                     if vcbot.channel != vc.channel:
                         embed.add_field(
-                            name="Canal de voz (bot):", inline=False,
+                            name="Voice channel (bot):", inline=False,
                             value=f"{vc.channel.name}" +
                                   (f" ({len(vc.channel.voice_states)}/{vc.channel.user_limit})"
                                    if vc.channel.user_limit else "") + f"\nID: {vc.channel.id}```"
@@ -6105,7 +6105,7 @@ class Music(commands.Cog):
         elif force_play == "yes":
             player.set_command_log(
                 emoji="▶️",
-                text=f"{inter.author.mention} adicionou a música atual para tocar imediatamente."
+                text=f"{inter.author.mention} ADDED A CURRENT MUSIC FOR TAP IMMEDIATE."
             )
             await player.track_end()
             await player.process_next()
@@ -6193,9 +6193,9 @@ class Music(commands.Cog):
             else:
                 print(
                     f'{"-" * 15}\n'
-                    f'Removendo invite: {invite} \n' +
-                    (f"Servidor: {vc.guild.name} [{vc.guild.id}]\n"
-                     f"Canal: {vc.name} [{vc.id}]\n" if vc else "") +
+                    f'Removing: {invite} \n' +
+                    (f"Server: {vc.guild.name} [{vc.guild.id}]\n"
+                     f"canal: {vc.name} [{vc.id}]\n" if vc else "") +
                     f'{"-" * 15}'
                 )
                 await self.bot.update_global_data(inter.guild_id, global_data, db_name=DBModel.guilds)
@@ -6329,7 +6329,7 @@ class Music(commands.Cog):
     async def parse_song_request(self, message: disnake.Message, text_channel, data, *, response=None, attachment: disnake.Attachment=None, source=None):
 
         if not message.author.voice:
-            raise GenericError("Você deve entrar em um canal de voz para pedir uma música.")
+            raise GenericError("You must enter a voice channel to ask for a music.")
 
         can_connect(
             channel=message.author.voice.channel,
@@ -6341,7 +6341,7 @@ class Music(commands.Cog):
         try:
             if message.guild.me.voice.channel != message.author.voice.channel:
                 raise GenericError(
-                    f"Você deve entrar no canal <#{message.guild.me.voice.channel.id}> para pedir uma música.")
+                    f"You must enter the channel <#{message.guild.me.voice.channel.id}> To order a music.")
         except AttributeError:
             pass
 
@@ -6385,8 +6385,8 @@ class Music(commands.Cog):
 
             if isinstance(message.channel, disnake.Thread) and not isinstance(message.channel.parent, disnake.ForumChannel):
                 tcount = len(tracks.tracks)
-                embed.description = f"✋ **⠂ Pedido por:** {message.author.mention}\n" \
-                                    f"🎼 **⠂ Música{'s'[:tcount^1]}:** `[{tcount}]`"
+                embed.description = f"✋ **⠂ Requested by:** {message.author.mention}\n" \
+                                    f"🎼 **⠂ Music{'s'[:tcount^1]}:** `[{tcount}]`"
                 embed.set_thumbnail(url=tracks.tracks[0].thumb)
                 embed.set_author(name="⠂" + fix_characters(tracks.tracks[0].playlist_name, 35), url=message.content,
                                  icon_url=music_source_image(tracks.tracks[0].info["sourceName"]))
@@ -6403,8 +6403,8 @@ class Music(commands.Cog):
 
                 components.extend(
                     [
-                        disnake.ui.Button(emoji="💗", label="Favoritar", custom_id=PlayerControls.embed_add_fav),
-                        disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="Adicionar na fila",custom_id=PlayerControls.embed_enqueue_playlist)
+                        disnake.ui.Button(emoji="💗", label="Favorite", custom_id=PlayerControls.embed_add_fav),
+                        disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="ADD",custom_id=PlayerControls.embed_enqueue_playlist)
                     ]
                 )
 
@@ -6415,7 +6415,7 @@ class Music(commands.Cog):
 
             else:
                 player.set_command_log(
-                    text=f"{message.author.mention} adicionou a playlist [`{fix_characters(tracks.data['playlistInfo']['name'], 20)}`]"
+                    text=f"{message.author.mention} added a playlist [`{fix_characters(tracks.data['playlistInfo']['name'], 20)}`]"
                          f"(<{tracks.tracks[0].playlist_url}>) `({len(tracks.tracks)})`.",
                     emoji="🎶"
                 )
@@ -6440,8 +6440,8 @@ class Music(commands.Cog):
 
             if isinstance(message.channel, disnake.Thread) and not isinstance(message.channel.parent, disnake.ForumChannel):
                 embed.description = f"💠 **⠂ Uploader:** `{track.author}`\n" \
-                                    f"✋ **⠂ Pedido por:** {message.author.mention}\n" \
-                                    f"⏰ **⠂ Duração:** `{time_format(track.duration) if not track.is_stream else '🔴 Livestream'}`"
+                                    f"✋ **⠂ Requested by:** {message.author.mention}\n" \
+                                    f"⏰ **⠂ Duration:** `{time_format(track.duration) if not track.is_stream else '🔴 Livestream'}`"
 
                 try:
                     embed.description += f"\n🔊 **⠂ Canal de voz:** {message.author.voice.channel.mention}"
@@ -6455,9 +6455,9 @@ class Music(commands.Cog):
 
                 components.extend(
                     [
-                        disnake.ui.Button(emoji="💗", label="Favoritar", custom_id=PlayerControls.embed_add_fav),
-                        disnake.ui.Button(emoji="<:play:914841137938829402>", label="Tocar" + (" agora" if (player.current and player.current.autoplay) else ""), custom_id=PlayerControls.embed_forceplay),
-                        disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="Adicionar na fila",
+                        disnake.ui.Button(emoji="💗", label="Favorite", custom_id=PlayerControls.embed_add_fav),
+                        disnake.ui.Button(emoji="<:play:914841137938829402>", label="Tap" + (" agora" if (player.current and player.current.autoplay) else ""), custom_id=PlayerControls.embed_forceplay),
+                        disnake.ui.Button(emoji="<:add_music:588172015760965654>", label="ADD",
                                           custom_id=PlayerControls.embed_enqueue_track)
                     ]
                 )
@@ -6472,7 +6472,7 @@ class Music(commands.Cog):
             else:
                 duration = time_format(tracks[0].duration) if not tracks[0].is_stream else '🔴 Livestream'
                 player.set_command_log(
-                    text=f"{message.author.mention} adicionou [`{fix_characters(tracks[0].title, 20)}`](<{tracks[0].uri or tracks[0].search_uri}>) `({duration})`.",
+                    text=f"{message.author.mention} added [`{fix_characters(tracks[0].title, 20)}`](<{tracks[0].uri or tracks[0].search_uri}>) `({duration})`.",
                     emoji="🎵"
                 )
                 if destroy_message:
@@ -6541,7 +6541,7 @@ class Music(commands.Cog):
 
             try:
                 if bot.user.id != self.bot.user.id:
-                    embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                    embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
             except AttributeError:
                 pass
 
@@ -6569,7 +6569,7 @@ class Music(commands.Cog):
 
             try:
                 if bot.user.id != self.bot.user.id:
-                    embed.set_footer(text=f"Bot selecionado: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
+                    embed.set_footer(text=f"Selected bot: {bot.user.display_name}", icon_url=bot.user.display_avatar.url)
             except AttributeError:
                 pass
 
@@ -6597,13 +6597,13 @@ class Music(commands.Cog):
         if ((dt_now:=datetime.datetime.now()) - node._retry_dt).total_seconds() < 7:
             node._retry_count += 1
         if node._retry_count >= 4:
-            print(f"❌ - {self.bot.user} - [{node.identifier} / v{node.version}] Reconexão cancelada.")
+            print(f"❌ - {self.bot.user} - [{node.identifier} / v{node.version}] Canceled Reconnection.")
             node._retry_count = 0
             return
         else:
             node._retry_dt = dt_now
 
-        print(f"⚠️ - {self.bot.user} - [{node.identifier} / v{node.version}] Conexão perdida - reconectando em {int(backoff)} segundos.")
+        print(f"⚠️ - {self.bot.user} - [{node.identifier} / v{node.version}] Lost connection - reconnecting in {int(backoff)} second.")
 
         while True:
 
@@ -6620,7 +6620,7 @@ class Music(commands.Cog):
                 player._new_node_task = player.bot.loop.create_task(player._wait_for_new_node())
 
             if self.bot.config["LAVALINK_RECONNECT_RETRIES"] and retries == self.bot.config["LAVALINK_RECONNECT_RETRIES"]:
-                print(f"❌ - {self.bot.user} - [{node.identifier}] Todas as tentativas de reconectar falharam...")
+                print(f"❌ - {self.bot.user} - [{node.identifier}] All attempts to reconcture failed...")
                 return
 
             await self.bot.wait_until_ready()
@@ -6644,8 +6644,8 @@ class Music(commands.Cog):
             backoff *= 1.5
             if node.identifier != "LOCAL":
                 print(
-                    f'⚠️ - {self.bot.user} - Falha ao reconectar no servidor [{node.identifier}] nova tentativa em {int(backoff)}'
-                    f' segundos. Erro: {error}'[:300])
+                    f'⚠️ - {self.bot.user} - Failure to reconnect to the server [{node.identifier}] new attempt in {int(backoff)}'
+                    f' seconds.Error: {error}'[:300])
             await asyncio.sleep(backoff)
             retries += 1
 
@@ -6664,7 +6664,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener("on_wavelink_node_ready")
     async def node_ready(self, node: wavelink.Node):
-        print(f'🌋 - {self.bot.user} - Servidor de música: [{node.identifier} / v{node.version}] está pronto para uso!')
+        print(f'🌋 - {self.bot.user} - Music server: [{node.identifier} / v{node.version}] is soon for use!')
         retries = 25
         while retries > 0:
 
@@ -6856,7 +6856,7 @@ class Music(commands.Cog):
             nodes.insert(0, node)
 
         if not nodes:
-            raise GenericError("**Não há servidores de música disponível!**")
+            raise GenericError("**There are no music servers available!**")
 
         exceptions = set()
 
@@ -6921,7 +6921,7 @@ class Music(commands.Cog):
                             break
 
                     if not isinstance(e, wavelink.TrackNotFound):
-                        print(f"Falha ao processar busca...\n{query}\n{traceback.format_exc()}")
+                        print(f"Falha ao processar search...\n{query}\n{traceback.format_exc()}")
                     else:
                         bot.dispatch("custom_error", ctx=ctx, error=e)
 
@@ -6940,7 +6940,7 @@ class Music(commands.Cog):
 
         if mix:
             if not self.bot.pool.last_fm:
-                raise GenericError("**No momento não há suporte a mix/recomendações devido o Last.fm não ter sido configurado na minha estrutura.**")
+                raise GenericError("**At the moment there is no support to mix/recommendations due to Last.FM has not been configured in my structure.**")
 
             query = query.title()
 
@@ -6950,7 +6950,7 @@ class Music(commands.Cog):
                 try:
                     artist, track = query.split(' ', 1)
                 except:
-                    raise GenericError("Você deve informar sua busca dessa forma: nome do artista - nome da música")
+                    raise GenericError("You should inform your Search this way: Artist Name - Music Name")
 
             exceptions = set()
 
@@ -6969,7 +6969,7 @@ class Music(commands.Cog):
                     exceptions.add(e)
 
                 if not info:
-                    txt = f"**Não houve resultados de mixes para sua busca: {artist} - {track}**"
+                    txt = f"**There were no results of mixes for your search: {artist} - {track}**"
                     if exceptions:
                         txt += f"\n\nErros: ```py\n" + "\n".join(repr(e) for e in exceptions) + "```"
                     raise GenericError(txt)
@@ -7010,7 +7010,7 @@ class Music(commands.Cog):
             try:
                 info = await bot.loop.run_in_executor(None, lambda: self.bot.pool.ytdl.extract_info(query, download=False))
             except AttributeError:
-                raise GenericError("**O uso do yt-dlp está desativado...**")
+                raise GenericError("**The use of YT-DLP is deactivated...**")
 
             playlist = PartialPlaylist(url=info["webpage_url"], data={"playlistInfo": {"name": info["title"]}})
 
@@ -7045,9 +7045,9 @@ class Music(commands.Cog):
 
             if txt:
                 if "This track is not readable. Available countries:" in txt:
-                    txt = "A música informada não está disponível na minha região atual..."
-                raise GenericError(f"**Ocorreu um erro ao processar sua busca:** \n{txt}", error=txt)
-            raise GenericError("**Não houve resultados para sua busca.**")
+                    txt = "Informed Music is not available in my current region..."
+                raise GenericError(f"**An error went by processing your Search:** \n{txt}", error=txt)
+            raise GenericError("**There were no results for your Search.**")
 
         return tracks, node
 
@@ -7069,9 +7069,9 @@ class Music(commands.Cog):
             await player.text_channel.send(
                 embed=disnake.Embed(
                     color=self.bot.get_color(thread.guild.me),
-                    description="**Não tenho permissão de enviar mensagens em conversas do canal atual para ativar "
-                                "o sistema de song-request...**\n\n"
-                                f"Mensagens enviadas na conversa {thread.mention} serão ignoradas."
+                    description="**I am not allowed to send messages in conversations of the current channel to activate "
+                                "The Song-Request System...**\n\n"
+                                f"Messages sent in the conversation {thread.mention} will be ignored."
                 ), delete_after=30
             )
             return
@@ -7079,21 +7079,21 @@ class Music(commands.Cog):
         embed = disnake.Embed(color=bot.get_color(thread.guild.me))
 
         if not bot.intents.message_content:
-            embed.description = "**Aviso! Não estou com a intent de message_content ativada por meu desenvolvedor...\n" \
-                                "A funcionalidade de pedir música aqui pode não ter um resultado esperado...**"
+            embed.description = "**Notice!I don't have the Intent of Message_content activated by my developer...\n" \
+                                "The functionality of asking for music here may not have an expected result...**"
 
         elif not player.controller_mode:
-            embed.description = "**A skin/aparência atual não é compatível com o sistem de song-request " \
-                               "via thread/conversa\n\n" \
-                               "Nota:** `Esse sistema requer uma skin que use botões.`"
+            embed.description = "**Skin/current appearance is not compatible with the Song-Request system " \
+                               "viaThread/conversa\n\n" \
+                               "NOTE: ** `This system requires a skin that uses buttons.`"
 
         else:
             if reopen:
-                embed.description = "**A sessão para pedidos de música nessa conversa foi reaberta na conversa atual.**"
+                embed.description = "**The session for music requests in this conversation was reopened in the current conversation.**"
             else:
-                embed.description = "**Essa conversa será usada temporariamente para pedido de músicas.**\n\n" \
-                                    "**Peça sua música aqui enviando o nome dela ou o link de uma música/vídeo " \
-                                    "que seja de uma das seguintes plataformas suportadas:**\n" \
+                embed.description = "**This conversation will be temporarily used to request Songs.**\n\n" \
+                                    "**Ask your music here sending her name or the link of a music/video " \
+                                    "that is one of the following platforms supported:**\n" \
                                     "[`Youtube`](<https://www.youtube.com/>), [`Soundcloud`](<https://soundcloud.com/>), " \
                                     "[`Spotify`](<https://open.spotify.com/>), [`Twitch`](<https://www.twitch.tv/>)"
 
@@ -7211,7 +7211,7 @@ class Music(commands.Cog):
 
                     if before.channel.instance and member not in before.channel.members:
                         try:
-                            await before.channel.instance.edit(topic="atualização automática desativada")
+                            await before.channel.instance.edit(topic="DISABLED AUTOMATIC UPDATE")
                         except:
                             traceback.print_exc()
                         player.stage_title_event = False
@@ -7358,18 +7358,18 @@ class Music(commands.Cog):
         if not free_bots:
 
             if bot_count:
-                txt = "**Todos os bots estão em uso no nomento...**"
+                txt = "**All bots are currently in use...**"
                 if voice_channels:
-                    txt += "\n\n**Você pode conectar em um dos canais abaixo onde há sessões ativas:**\n" + ", ".join(
+                    txt += "\n\n**You can connect to one of the channels below where there are active sessions:**\n" + ", ".join(
                         voice_channels)
                     if inter.author.guild_permissions.manage_guild:
-                        txt += "\n\n**Ou se preferir: Adicione mais bots de música no servidor atual clicando no botão abaixo:**"
+                        txt += "\n\n**Or if you prefer: add more music bots to the current server by clicking the button below:**"
                     else:
-                        txt += "\n\n**Ou se preferir: Solicite a um administrador/manager do servidor para clicar no botão abaixo " \
-                               "para adicionar mais bots de música no servidor atual.**"
+                        txt += "\n\n**Or if you prefer: request a server administrator/manager to click the button below " \
+                               "To add more music bots to the current server.**"
             else:
-                txt = "**Não há bots de música compatíveis no servidor...**" \
-                      "\n\nSerá necessário adicionar pelo menos um bot compatível clicando no botão abaixo:"
+                txt = "**There are no music bots compatible on the server...**" \
+                      "\n\nYou will need to add at least one compatible bot by clicking the button below:"
 
             kwargs = {}
 
@@ -7445,7 +7445,7 @@ class Music(commands.Cog):
                     await node.connect()
                 return node
 
-            raise GenericError("**Não há servidores de música disponível.**")
+            raise GenericError("**There are no music servers available.**")
 
     async def error_report_loop(self):
 
