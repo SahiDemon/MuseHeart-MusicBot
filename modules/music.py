@@ -2306,7 +2306,7 @@ class Music(commands.Cog):
             view = VolumeInteraction(inter)
 
             embed.colour = self.bot.get_color(guild.me)
-            embed.description = "**Select the volume level below
+            embed.description = "**Select the volume level below**"
 
             try:
                 if bot.user.id != self.bot.user.id:
